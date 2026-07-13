@@ -13,11 +13,13 @@
     "db:seed": "prisma db seed"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "^1.6.23",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",
     "@nestjs/platform-express": "^11.1.27",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "@thallesp/nestjs-better-auth": "^2.7.0",
     "dotenv": "^17.4.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
