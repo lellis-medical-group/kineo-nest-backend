@@ -4,13 +4,13 @@
   "packageManager": "npm@11.17.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "build": "tsc",
-    "start": "node dist/main.js",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed"
+    "dev": "bun --watch src/main.ts",
+    "build": "bun x tsc",
+    "start": "bun dist/main.js",
+    "db:generate": "bunx prisma generate",
+    "db:push": "bunx prisma db push",
+    "db:migrate": "bunx prisma migrate dev",
+    "db:seed": "bunx prisma db seed"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.23",
