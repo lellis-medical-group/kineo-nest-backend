@@ -27,7 +27,9 @@
   },
   "devDependencies": {
     "@prisma/compute-sdk": "latest",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.0.0",
+    "jest": "^30.4.2",
     "prisma": "^7.8.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
