@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createPrismaClient } from "./prisma";
-import { jwt } from "better-auth/plugins"
+import { jwt, openAPI } from "better-auth/plugins"
 
 const prisma = createPrismaClient();
 
@@ -10,7 +10,7 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
 
-  plugins: [jwt()],
+  plugins: [jwt(), openAPI()],
   secret: process.env.BETTER_AUTH_SECRET,
 
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
