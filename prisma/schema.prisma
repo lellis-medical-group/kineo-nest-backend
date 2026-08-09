@@ -18,6 +18,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  profile       Profile?
 
   @@map("user")
 }
@@ -77,4 +78,35 @@ model Jwks {
   expiresAt  DateTime?
 
   @@map("jwks")
+}
+
+enum ProfileType {
+  INSTALLED
+  REPLACEMENT
+  BOTH
+}
+
+enum Specialty {
+  GENERALIST
+  DENTIST
+  DERMATOLOGIST
+  PSYCHIATRIST
+  OTHER
+}
+
+model Profile {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rppsNumber  String?     @unique
+  specialty   Specialty
+  profileType ProfileType
+  verified    Boolean     @default(false)
+  city        String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("profile")
 }
