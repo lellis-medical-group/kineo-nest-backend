@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createPrismaClient } from "./prisma";
-import { openAPI } from "better-auth/plugins";
+import { openAPI, jwt } from "better-auth/plugins";
 
 const prisma = createPrismaClient();
 
@@ -9,12 +9,33 @@ if (!process.env.BETTER_AUTH_SECRET) {
   throw new Error("BETTER_AUTH_SECRET is not set");
 }
 
+const jwtEnabled = process.env.JWT_ENABLED === "true";
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
 
-  plugins: [openAPI()],
+  plugins: [
+    openAPI(),
+    ...(jwtEnabled
+      ? [
+        jwt({
+          jwt: {
+            expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
+            issuer: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+            audience: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+          },
+          jwks: {
+            rotationInterval: process.env.JWT_ROTATION_INTERVAL
+              ? Number(process.env.JWT_ROTATION_INTERVAL)
+              : undefined,
+          },
+        }),
+      ]
+      : []),
+  ],
+
   secret: process.env.BETTER_AUTH_SECRET,
 
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
