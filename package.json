@@ -4,22 +4,24 @@
   "packageManager": "npm@11.17.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "build": "tsc",
-    "start": "node dist/main.js",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed"
+    "dev": "bun --watch src/main.ts",
+    "build": "bun x tsc",
+    "start": "bun dist/main.js",
+    "db:generate": "bunx prisma generate",
+    "db:push": "bunx prisma db push",
+    "db:migrate": "bunx prisma migrate dev",
+    "db:seed": "bunx prisma db seed"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.6.23",
-    "@nestjs/common": "^11.1.27",
-    "@nestjs/core": "^11.1.27",
+    "@better-auth/prisma-adapter": "^1.6.26",
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.1.28",
     "@nestjs/mapped-types": "^2.1.1",
-    "@nestjs/platform-express": "^11.1.27",
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@nestjs/platform-express": "^11.1.28",
+    "@nestjs/swagger": "^11.4.6",
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
     "@thallesp/nestjs-better-auth": "^2.7.0",
     "dotenv": "^17.4.2",
     "reflect-metadata": "^0.2.2",
@@ -27,9 +29,11 @@
   },
   "devDependencies": {
     "@prisma/compute-sdk": "latest",
-    "@types/node": "^26.0.0",
-    "prisma": "^7.8.0",
-    "tsx": "^4.22.4",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.2.0",
+    "jest": "^30.4.2",
+    "prisma": "^7.9.1",
+    "tsx": "^4.23.11",
     "typescript": "^6.0.3"
   }
 }
