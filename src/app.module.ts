@@ -7,6 +7,8 @@ import { UsersModule } from './users/users.module';
 import { ConfigModule } from "@nestjs/config";
 import { ProfileModule } from './profile/profile.module';
 import configuration from "./config/configuration";
+import { APP_INTERCEPTOR, APP_PIPE, } from "@nestjs/core";
+import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod";
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), AuthModule.forRoot({ auth }), UsersModule, ProfileModule],
@@ -15,6 +17,7 @@ import configuration from "./config/configuration";
   ],
   providers: [
     PrismaService,
+    { provide: APP_PIPE, useClass: ZodValidationPipe }, { provide: APP_INTERCEPTOR, useClass: ZodSerializerInterceptor }
   ],
 })
 export class AppModule { }

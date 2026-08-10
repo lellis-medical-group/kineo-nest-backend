@@ -24,11 +24,14 @@
     "@prisma/client": "^7.9.1",
     "@thallesp/nestjs-better-auth": "^2.7.0",
     "dotenv": "^17.4.2",
+    "nestjs-zod": "^5.5.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@prisma/compute-sdk": "latest",
+    "@types/bun": "^1.3.14",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
     "jest": "^30.4.2",
