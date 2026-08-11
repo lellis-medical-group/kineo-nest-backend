@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -107,6 +106,22 @@ model Profile {
   longitude   Float?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  practices   Practice[]
 
   @@map("profile")
+}
+
+model Practice {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     Profile  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  address   String
+  city      String
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+  @@map("practice")
 }
