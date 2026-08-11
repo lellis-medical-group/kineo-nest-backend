@@ -1,4 +1,6 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateProfileDto } from './create-profile.dto';
+import { createZodDto } from 'nestjs-zod';
+import { CreateProfileSchema } from './create-profile.dto';
 
-export class UpdateProfileDto extends PartialType(CreateProfileDto) {}
+export const UpdateProfileSchema = CreateProfileSchema.partial();
+
+export class UpdateProfileDto extends createZodDto(UpdateProfileSchema) {}
