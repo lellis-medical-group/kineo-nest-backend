@@ -4,6 +4,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 
 import { AppModule } from './app.module';
 
@@ -28,8 +29,7 @@ async function bootstrap() {
     .addTag(configService.get<string>('swagger.tag', 'Kineo'))
     .build();
 
-  const documentFactory = () =>
-    SwaggerModule.createDocument(app, swaggerConfig);
+  const documentFactory = () => cleanupOpenApiDoc(SwaggerModule.createDocument(app, swaggerConfig));
 
   SwaggerModule.setup('api', app, documentFactory);
 
