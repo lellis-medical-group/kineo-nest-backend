@@ -9,9 +9,10 @@ import { ProfileModule } from './profile/profile.module';
 import configuration from "./config/configuration";
 import { APP_INTERCEPTOR, APP_PIPE, } from "@nestjs/core";
 import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod";
+import { PracticesModule } from './practices/practices.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), AuthModule.forRoot({ auth }), UsersModule, ProfileModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, load: [configuration] }), AuthModule.forRoot({ auth }), UsersModule, ProfileModule, PracticesModule],
   controllers: [
     AppController,
   ],
