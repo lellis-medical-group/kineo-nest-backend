@@ -1,34 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Session, AllowAnonymous } from '@thallesp/nestjs-better-auth';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
+import { ZodSerializerDto } from 'nestjs-zod';
 import { PracticesService } from './practices.service';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
+import { FindPracticesDto } from './dto/find-practices.dto';
+import { PaginatedPractices, Practice } from './entities/practice.entity';
 
 @Controller('practices')
 export class PracticesController {
-  constructor(private readonly practicesService: PracticesService) {}
+  constructor(private readonly practicesService: PracticesService) { }
 
   @Post()
-  create(@Body() createPracticeDto: CreatePracticeDto) {
-    return this.practicesService.create(createPracticeDto);
+  @ZodSerializerDto(Practice)
+  create(@Session() session: UserSession, @Body() createPracticeDto: CreatePracticeDto) {
+    return this.practicesService.create(session.user.id, createPracticeDto);
   }
 
   @Get()
-  findAll() {
-    return this.practicesService.findAll();
+  @AllowAnonymous()
+  @ZodSerializerDto(PaginatedPractices)
+  findAll(@Query() query: FindPracticesDto) {
+    return this.practicesService.findAll(query);
+  }
+
+  @Get('mine')
+  @ZodSerializerDto([Practice])
+  findMine(@Session() session: UserSession) {
+    return this.practicesService.findMine(session.user.id);
   }
 
   @Get(':id')
+  @AllowAnonymous()
+  @ZodSerializerDto(Practice)
   findOne(@Param('id') id: string) {
-    return this.practicesService.findOne(+id);
+    return this.practicesService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePracticeDto: UpdatePracticeDto) {
-    return this.practicesService.update(+id, updatePracticeDto);
+  @ZodSerializerDto(Practice)
+  update(@Session() session: UserSession, @Param('id') id: string, @Body() updatePracticeDto: UpdatePracticeDto) {
+    return this.practicesService.update(id, session.user.id, updatePracticeDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.practicesService.remove(+id);
+  remove(@Session() session: UserSession, @Param('id') id: string) {
+    return this.practicesService.remove(id, session.user.id);
   }
 }
