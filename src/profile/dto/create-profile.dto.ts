@@ -9,6 +9,7 @@ export const CreateProfileSchema = z.object({
   city: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  isPublic: z.boolean().optional(),
 });
 
-export class CreateProfileDto extends createZodDto(CreateProfileSchema) { }
+export class CreateProfileDto extends createZodDto(CreateProfileSchema) {}

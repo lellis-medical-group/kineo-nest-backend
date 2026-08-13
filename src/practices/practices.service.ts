@@ -18,6 +18,16 @@ export class PracticesService {
     return profile.id;
   }
 
+  private async getOwnedProfileIdSafe(userId?: string) {
+    if (!userId) {
+      return undefined;
+    }
+
+    const profile = await this.prisma.profile.findUnique({ where: { userId } });
+
+    return profile?.id;
+  }
+
   async create(userId: string, createPracticeDto: CreatePracticeDto) {
     const ownerId = await this.getOwnedProfileId(userId);
 
@@ -33,22 +43,40 @@ export class PracticesService {
     const skip = (page - 1) * limit;
 
     if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
-      const practices = await this.prisma.$queryRaw<any[]>`
-      SELECT *, (
-        6371 * acos(
-          cos(radians(${lat})) * cos(radians(latitude)) *
-          cos(radians(longitude) - radians(${lng})) +
-          sin(radians(${lat})) * sin(radians(latitude))
-        )
-      ) AS distance
-      FROM practice
-      WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-      HAVING distance <= ${radiusKm}
-      ORDER BY distance ASC
-      LIMIT ${limit} OFFSET ${skip}
-    `;
+      const [practices, countResult] = await Promise.all([
+        this.prisma.$queryRaw<any[]>`
+        SELECT * FROM (
+          SELECT *, (
+            6371 * acos(
+              cos(radians(${lat})) * cos(radians(latitude)) *
+              cos(radians(longitude) - radians(${lng})) +
+              sin(radians(${lat})) * sin(radians(latitude))
+            )
+          ) AS distance
+          FROM practice
+          WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND "isPublic" = true
+        ) sub
+        WHERE distance <= ${radiusKm}
+        ORDER BY distance ASC
+        LIMIT ${limit} OFFSET ${skip}
+      `,
+        this.prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*) FROM (
+          SELECT *, (
+            6371 * acos(
+              cos(radians(${lat})) * cos(radians(latitude)) *
+              cos(radians(longitude) - radians(${lng})) +
+              sin(radians(${lat})) * sin(radians(latitude))
+            )
+          ) AS distance
+          FROM practice
+          WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND "isPublic" = true
+        ) sub
+        WHERE distance <= ${radiusKm}
+      `,
+      ]);
 
-      const total = practices.length;
+      const total = Number(countResult[0].count);
 
       return {
         data: practices,
@@ -57,6 +85,7 @@ export class PracticesService {
     }
 
     const where = {
+      isPublic: true,
       ...(name && { name: { contains: name, mode: 'insensitive' as const } }),
       ...(city && { city: { contains: city, mode: 'insensitive' as const } }),
     };
@@ -78,18 +107,26 @@ export class PracticesService {
     return this.prisma.practice.findMany({ where: { ownerId } });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requesterUserId?: string) {
     const practice = await this.prisma.practice.findUnique({ where: { id } });
 
     if (!practice) {
       throw new NotFoundException(`Practice ${id} not found`);
     }
 
+    if (!practice.isPublic) {
+      const ownerId = await this.getOwnedProfileIdSafe(requesterUserId);
+
+      if (ownerId !== practice.ownerId) {
+        throw new NotFoundException(`Practice ${id} not found`);
+      }
+    }
+
     return practice;
   }
 
   async update(id: string, userId: string, updatePracticeDto: UpdatePracticeDto) {
-    const practice = await this.findOne(id);
+    const practice = await this.findOne(id, userId);
     const ownerId = await this.getOwnedProfileId(userId);
 
     if (practice.ownerId !== ownerId) {
@@ -103,7 +140,7 @@ export class PracticesService {
   }
 
   async remove(id: string, userId: string) {
-    const practice = await this.findOne(id);
+    const practice = await this.findOne(id, userId);
     const ownerId = await this.getOwnedProfileId(userId);
 
     if (practice.ownerId !== ownerId) {

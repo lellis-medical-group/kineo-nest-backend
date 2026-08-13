@@ -9,10 +9,11 @@ export const PracticeSchema = z.object({
   city: z.string(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
+  isPublic: z.boolean(),
   createdAt: z.date(),
 });
 
-export class Practice extends createZodDto(PracticeSchema) { }
+export class Practice extends createZodDto(PracticeSchema) {}
 
 export const PaginatedPracticesSchema = z.object({
   data: z.array(PracticeSchema),
@@ -24,4 +25,4 @@ export const PaginatedPracticesSchema = z.object({
   }),
 });
 
-export class PaginatedPractices extends createZodDto(PaginatedPracticesSchema) { }
+export class PaginatedPractices extends createZodDto(PaginatedPracticesSchema) {}

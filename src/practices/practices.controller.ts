@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
-import { Session, AllowAnonymous } from '@thallesp/nestjs-better-auth';
+import { Session, AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { PracticesService } from './practices.service';
@@ -10,7 +10,7 @@ import { PaginatedPractices, Practice } from './entities/practice.entity';
 
 @Controller('practices')
 export class PracticesController {
-  constructor(private readonly practicesService: PracticesService) { }
+  constructor(private readonly practicesService: PracticesService) {}
 
   @Post()
   @ZodSerializerDto(Practice)
@@ -32,10 +32,10 @@ export class PracticesController {
   }
 
   @Get(':id')
-  @AllowAnonymous()
+  @OptionalAuth()
   @ZodSerializerDto(Practice)
-  findOne(@Param('id') id: string) {
-    return this.practicesService.findOne(id);
+  findOne(@Session() session: UserSession | undefined, @Param('id') id: string) {
+    return this.practicesService.findOne(id, session?.user.id);
   }
 
   @Patch(':id')

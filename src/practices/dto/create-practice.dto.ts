@@ -7,6 +7,7 @@ export const CreatePracticeSchema = z.object({
   city: z.string(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+  isPublic: z.boolean().optional(),
 });
 
 export class CreatePracticeDto extends createZodDto(CreatePracticeSchema) {}

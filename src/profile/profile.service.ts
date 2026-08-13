@@ -1,4 +1,3 @@
-// src/profile/profile.service.ts
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
@@ -24,6 +23,7 @@ export class ProfileService {
   findAll(filters: FindProfilesDto) {
     return this.prisma.profile.findMany({
       where: {
+        isPublic: true,
         specialty: filters.specialty,
         profileType: filters.profileType,
         city: filters.city,
@@ -31,22 +31,32 @@ export class ProfileService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requesterUserId?: string) {
     const profile = await this.prisma.profile.findUnique({ where: { id } });
 
     if (!profile) {
       throw new NotFoundException(`Profile ${id} not found`);
     }
 
+    if (!profile.isPublic && profile.userId !== requesterUserId) {
+      throw new NotFoundException(`Profile ${id} not found`);
+    }
+
     return profile;
   }
 
-  findByUserId(userId: string) {
-    return this.prisma.profile.findUnique({ where: { userId } });
+  async findByUserId(userId: string) {
+    const profile = await this.prisma.profile.findUnique({ where: { userId } });
+
+    if (!profile) {
+      throw new NotFoundException('No profile found for this user');
+    }
+
+    return profile;
   }
 
   async update(id: string, userId: string, updateProfileDto: UpdateProfileDto) {
-    const profile = await this.findOne(id);
+    const profile = await this.findOne(id, userId);
 
     if (profile.userId !== userId) {
       throw new ForbiddenException();
@@ -59,7 +69,7 @@ export class ProfileService {
   }
 
   async remove(id: string, userId: string) {
-    const profile = await this.findOne(id);
+    const profile = await this.findOne(id, userId);
 
     if (profile.userId !== userId) {
       throw new ForbiddenException();
