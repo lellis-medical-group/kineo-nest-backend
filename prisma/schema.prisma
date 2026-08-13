@@ -101,6 +101,7 @@ model Profile {
   specialty   Specialty
   profileType ProfileType
   verified    Boolean     @default(false)
+  isPublic    Boolean     @default(true)
   city        String?
   latitude    Float?
   longitude   Float?
@@ -120,6 +121,7 @@ model Practice {
   city      String
   latitude  Float?
   longitude Float?
+  isPublic  Boolean  @default(true)
   createdAt DateTime @default(now())
 
   @@index([ownerId])
