@@ -3,10 +3,11 @@ import { PrismaService } from '../prisma.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FindProfilesDto } from './dto/find-profiles.dto';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class ProfileService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) { }
 
   async create(userId: string, createProfileDto: CreateProfileDto) {
     const existing = await this.prisma.profile.findUnique({ where: { userId } });
@@ -15,9 +16,16 @@ export class ProfileService {
       throw new ConflictException('Profile already exists for this user');
     }
 
-    return this.prisma.profile.create({
-      data: { ...createProfileDto, userId },
-    });
+    try {
+      return await this.prisma.profile.create({
+        data: { ...createProfileDto, userId },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('RPPS number already in use');
+      }
+      throw error;
+    }
   }
 
   findAll(filters: FindProfilesDto) {
@@ -62,10 +70,17 @@ export class ProfileService {
       throw new ForbiddenException();
     }
 
-    return this.prisma.profile.update({
-      where: { id },
-      data: updateProfileDto,
-    });
+    try {
+      return await this.prisma.profile.update({
+        where: { id },
+        data: updateProfileDto,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('RPPS number already in use');
+      }
+      throw error;
+    }
   }
 
   async remove(id: string, userId: string) {
