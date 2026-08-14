@@ -9,6 +9,7 @@ export const ProfileSchema = z.object({
   specialty: z.enum(Specialty),
   profileType: z.enum(ProfileType),
   verified: z.boolean(),
+  isPublic: z.boolean(),
   city: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),

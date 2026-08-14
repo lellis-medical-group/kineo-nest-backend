@@ -1,13 +1,13 @@
-// src/profile/profile.service.ts
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FindProfilesDto } from './dto/find-profiles.dto';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class ProfileService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) { }
 
   async create(userId: string, createProfileDto: CreateProfileDto) {
     const existing = await this.prisma.profile.findUnique({ where: { userId } });
@@ -16,14 +16,22 @@ export class ProfileService {
       throw new ConflictException('Profile already exists for this user');
     }
 
-    return this.prisma.profile.create({
-      data: { ...createProfileDto, userId },
-    });
+    try {
+      return await this.prisma.profile.create({
+        data: { ...createProfileDto, userId },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('RPPS number already in use');
+      }
+      throw error;
+    }
   }
 
   findAll(filters: FindProfilesDto) {
     return this.prisma.profile.findMany({
       where: {
+        isPublic: true,
         specialty: filters.specialty,
         profileType: filters.profileType,
         city: filters.city,
@@ -31,35 +39,52 @@ export class ProfileService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requesterUserId?: string) {
     const profile = await this.prisma.profile.findUnique({ where: { id } });
 
     if (!profile) {
       throw new NotFoundException(`Profile ${id} not found`);
     }
 
+    if (!profile.isPublic && profile.userId !== requesterUserId) {
+      throw new NotFoundException(`Profile ${id} not found`);
+    }
+
     return profile;
   }
 
-  findByUserId(userId: string) {
-    return this.prisma.profile.findUnique({ where: { userId } });
+  async findByUserId(userId: string) {
+    const profile = await this.prisma.profile.findUnique({ where: { userId } });
+
+    if (!profile) {
+      throw new NotFoundException('No profile found for this user');
+    }
+
+    return profile;
   }
 
   async update(id: string, userId: string, updateProfileDto: UpdateProfileDto) {
-    const profile = await this.findOne(id);
+    const profile = await this.findOne(id, userId);
 
     if (profile.userId !== userId) {
       throw new ForbiddenException();
     }
 
-    return this.prisma.profile.update({
-      where: { id },
-      data: updateProfileDto,
-    });
+    try {
+      return await this.prisma.profile.update({
+        where: { id },
+        data: updateProfileDto,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('RPPS number already in use');
+      }
+      throw error;
+    }
   }
 
   async remove(id: string, userId: string) {
-    const profile = await this.findOne(id);
+    const profile = await this.findOne(id, userId);
 
     if (profile.userId !== userId) {
       throw new ForbiddenException();
