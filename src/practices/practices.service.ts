@@ -1,8 +1,9 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException, UseGuards } from '@nestjs/common';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
 import { PrismaService } from '../prisma.service';
 import type { FindPracticesDto } from './dto/find-practices.dto';
+import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
 
 @Injectable()
 export class PracticesService {
@@ -28,6 +29,7 @@ export class PracticesService {
     return profile?.id;
   }
 
+  @UseGuards(EmailVerifiedGuard)
   async create(userId: string, createPracticeDto: CreatePracticeDto) {
     const ownerId = await this.getOwnedProfileId(userId);
 
