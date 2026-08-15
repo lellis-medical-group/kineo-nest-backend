@@ -6,6 +6,16 @@ export default () => ({
     port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
   },
 
+  cors: {
+    origins: (process.env.TRUSTED_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+
+    credentials: true,
+  },
+
+
   swagger: {
     title: 'Kineo API',
     description: 'Kineo API documentation',

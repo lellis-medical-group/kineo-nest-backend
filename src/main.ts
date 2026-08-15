@@ -17,6 +17,8 @@ async function bootstrap() {
 
   const port = configService.get<number>('port', 3000);
 
+  const corsOrigins = configService.get<string[]>('cors.origins', []);
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle(configService.get<string>('swagger.title', 'Kineo API'))
     .setDescription(
@@ -32,6 +34,11 @@ async function bootstrap() {
   const documentFactory = () => cleanupOpenApiDoc(SwaggerModule.createDocument(app, swaggerConfig));
 
   SwaggerModule.setup('api', app, documentFactory);
+
+  app.enableCors({
+    origin: corsOrigins,
+    credentials: configService.get<boolean>('cors.credentials', true),
+  });
 
   await app.listen(port, '0.0.0.0');
 
