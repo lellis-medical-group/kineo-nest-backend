@@ -231,9 +231,9 @@ stateDiagram-v2
 ## 7. Roadmap
 
 - [x] Auth (better-auth + Prisma)
-- [ ] DoctorProfile Module
-- [ ] Practice Module
-- [ ] ReplacementListing Module (CRUD + search by city/specialty)
+- [x] DoctorProfile Module
+- [x] Practice Module
+- [x] ReplacementListing Module (CRUD + search by city/specialty)
 - [ ] Application Module (application + acceptance)
 - [ ] Messaging Module (conversation linked to an application)
 - [ ] Frontend (TBD)
