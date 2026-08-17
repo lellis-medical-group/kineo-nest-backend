@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 
@@ -13,6 +14,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
+
+  app.use(helmet());
 
   const configService = app.get(ConfigService);
 
@@ -23,6 +26,11 @@ async function bootstrap() {
   const port = configService.get<number>('port', 3000);
 
   const corsOrigins = configService.get<string[]>('cors.origins', []);
+
+  app.enableCors({
+    origin: corsOrigins,
+    credentials: configService.get<boolean>('cors.credentials', true),
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle(configService.get<string>('swagger.title', 'Kineo API'))
@@ -39,11 +47,6 @@ async function bootstrap() {
   const documentFactory = () => cleanupOpenApiDoc(SwaggerModule.createDocument(app, swaggerConfig));
 
   SwaggerModule.setup('api', app, documentFactory);
-
-  app.enableCors({
-    origin: corsOrigins,
-    credentials: configService.get<boolean>('cors.credentials', true),
-  });
 
   await app.listen(port, '0.0.0.0');
 
