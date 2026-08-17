@@ -1,4 +1,3 @@
-// src/replacement-listings/entities/replacementlisting.entity.ts
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import { ListingStatus, Specialty } from '../../generated/prisma/enums';
@@ -13,11 +12,12 @@ export const ReplacementListingSchema = z.object({
   status: z.enum(ListingStatus),
   urgent: z.boolean(),
   description: z.string().nullable(),
+  maxApplications: z.number().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
 
-export class ReplacementListing extends createZodDto(ReplacementListingSchema) {}
+export class ReplacementListing extends createZodDto(ReplacementListingSchema) { }
 
 export const PaginatedReplacementListingsSchema = z.object({
   data: z.array(ReplacementListingSchema),
@@ -29,4 +29,4 @@ export const PaginatedReplacementListingsSchema = z.object({
   }),
 });
 
-export class PaginatedReplacementListings extends createZodDto(PaginatedReplacementListingsSchema) {}
+export class PaginatedReplacementListings extends createZodDto(PaginatedReplacementListingsSchema) { }
