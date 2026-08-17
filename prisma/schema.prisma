@@ -97,6 +97,7 @@ enum ListingStatus {
   DRAFT
   OPEN
   IN_DISCUSSION
+  FULL
   FILLED
   CLOSED
   CANCELLED
@@ -104,6 +105,7 @@ enum ListingStatus {
 
 enum ApplicationStatus {
   PENDING
+  SHORTLISTED
   ACCEPTED
   REJECTED
   WITHDRAWN
@@ -148,20 +150,21 @@ model Practice {
 }
 
 model ReplacementListing {
-  id           String        @id @default(cuid())
-  practiceId   String
-  practice     Practice      @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  createdById  String
-  createdBy    Profile       @relation("CreatedListings", fields: [createdById], references: [id], onDelete: Cascade)
-  startDate    DateTime
-  endDate      DateTime
-  specialty    Specialty
-  status       ListingStatus @default(DRAFT)
-  urgent       Boolean       @default(false)
-  description  String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  applications Application[]
+  id              String        @id @default(cuid())
+  practiceId      String
+  practice        Practice      @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdBy       Profile       @relation("CreatedListings", fields: [createdById], references: [id], onDelete: Cascade)
+  startDate       DateTime
+  endDate         DateTime
+  specialty       Specialty
+  status          ListingStatus @default(DRAFT)
+  urgent          Boolean       @default(false)
+  description     String?
+  maxApplications Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  applications    Application[]
 
   @@index([practiceId])
   @@index([status])
@@ -169,15 +172,19 @@ model ReplacementListing {
 }
 
 model Application {
-  id          String             @id @default(cuid())
-  listingId   String
-  listing     ReplacementListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  applicantId String
-  applicant   Profile            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  status      ApplicationStatus  @default(PENDING)
-  message     String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id              String             @id @default(cuid())
+  listingId       String
+  listing         ReplacementListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  applicantId     String
+  applicant       Profile            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  status          ApplicationStatus  @default(PENDING)
+  message         String?
+  rejectionReason String?
+  withdrawnReason String?
+  viewedAt        DateTime?
+  respondedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@unique([listingId, applicantId])
   @@index([listingId])
