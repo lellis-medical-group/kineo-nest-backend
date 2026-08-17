@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateApplicationDto } from './create-application.dto';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
 
-export class UpdateApplicationDto extends PartialType(CreateApplicationDto) {}
+export const UpdateApplicationSchema = z.object({
+  message: z.string().describe('Updated message, only editable while the application is pending'),
+});
+
+export class UpdateApplicationDto extends createZodDto(UpdateApplicationSchema) {}
