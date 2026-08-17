@@ -5,15 +5,20 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
 
   const configService = app.get(ConfigService);
+
+  if (configService.get<boolean>('trustProxy', false)) {
+    app.set('trust proxy', 1);
+  }
 
   const port = configService.get<number>('port', 3000);
 
