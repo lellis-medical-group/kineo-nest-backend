@@ -9,4 +9,4 @@ export const FindApplicationsSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20).describe('Number of results per page, max 100'),
 });
 
-export class FindApplicationsDto extends createZodDto(FindApplicationsSchema) {}
+export class FindApplicationsDto extends createZodDto(FindApplicationsSchema) { }

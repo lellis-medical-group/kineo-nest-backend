@@ -3,6 +3,7 @@ import { Session, AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-a
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -15,6 +16,7 @@ export class ProfileController {
   constructor(private readonly profileService: ProfileService) { }
 
   @Post()
+  @Throttle({ medium: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: 'Create a professional profile for the current user' })
   @ApiResponse({ status: 201, description: 'Profile created' })
   @ApiResponse({ status: 409, description: 'Profile already exists or RPPS number already in use' })

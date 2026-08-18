@@ -3,6 +3,7 @@ import { Session } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ApplicationsService } from './applications.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
@@ -19,6 +20,7 @@ export class ApplicationsController {
 
   @Post()
   @UseGuards(EmailVerifiedGuard)
+  @Throttle({ medium: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: 'Apply to a replacement listing' })
   @ApiResponse({ status: 201, description: 'Application submitted' })
   @ApiResponse({ status: 409, description: 'Already applied to this listing' })

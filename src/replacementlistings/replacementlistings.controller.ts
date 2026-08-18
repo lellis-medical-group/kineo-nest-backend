@@ -3,6 +3,7 @@ import { Session, AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-a
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ReplacementlistingsService } from './replacementlistings.service';
 import { FindReplacementListingsDto } from './dto/find-replacementlistings.dto';
 import { ReplacementListing, PaginatedReplacementListings } from './entities/replacementlisting.entity';
@@ -17,6 +18,7 @@ export class ReplacementlistingsController {
 
   @Post()
   @UseGuards(EmailVerifiedGuard)
+  @Throttle({ medium: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: 'Create a draft replacement listing for a practice you own' })
   @ApiResponse({ status: 201, description: 'Listing created as draft' })
   @ApiResponse({ status: 403, description: 'You do not own this practice or email not verified' })

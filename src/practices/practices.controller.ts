@@ -3,6 +3,7 @@ import { Session, AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-a
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PracticesService } from './practices.service';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
@@ -15,6 +16,7 @@ export class PracticesController {
   constructor(private readonly practicesService: PracticesService) { }
 
   @Post()
+  @Throttle({ medium: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: "Create a practice owned by the current user's profile" })
   @ApiResponse({ status: 201, description: 'Practice created' })
   @ZodSerializerDto(Practice)

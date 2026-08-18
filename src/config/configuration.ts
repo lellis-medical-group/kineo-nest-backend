@@ -15,6 +15,13 @@ export default () => ({
     credentials: true,
   },
 
+  trustProxy: process.env.TRUST_PROXY === 'true',
+
+  throttle: {
+    short: { ttl: 1000, limit: parseInt(process.env.THROTTLE_SHORT_LIMIT ?? '5', 10) },
+    medium: { ttl: 10000, limit: parseInt(process.env.THROTTLE_MEDIUM_LIMIT ?? '30', 10) },
+    long: { ttl: 60000, limit: parseInt(process.env.THROTTLE_LONG_LIMIT ?? '150', 10) },
+  },
 
   swagger: {
     title: 'Kineo API',
