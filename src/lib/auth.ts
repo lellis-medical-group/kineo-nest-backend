@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createPrismaClient } from "./prisma";
 import { openAPI, jwt } from "better-auth/plugins";
+import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
 
 const prisma = createPrismaClient();
 
@@ -63,19 +64,29 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+
     requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
     minPasswordLength: 8,
     autoSignIn: true,
 
-    sendResetPassword: async ({ user, url, token }) => {
-      console.log(`Reset password URL for ${user.email}: ${url}`);
+    sendResetPassword: async ({ user, url }) => {
+      await sendResetPasswordEmail({
+        email: user.email,
+        name: user.name,
+        url,
+      });
     },
   },
 
   emailVerification: {
-    sendVerificationEmail: async ({ user, url, token }) => {
-      console.log(`Verification URL for ${user.email}: ${url}`);
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendVerificationEmail({
+        email: user.email,
+        name: user.name,
+        url,
+      });
     },
+
     autoSignInAfterVerification: true,
   },
 });

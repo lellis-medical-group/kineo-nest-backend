@@ -15,7 +15,22 @@ async function bootstrap() {
     bodyParser: false,
   });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: [`'self'`],
+          scriptSrc: [`'self'`, `'unsafe-inline'`, 'cdn.jsdelivr.net'],
+          styleSrc: [`'self'`, `'unsafe-inline'`, 'cdn.jsdelivr.net', 'fonts.googleapis.com'],
+          imgSrc: [`'self'`, 'data:', 'cdn.jsdelivr.net'],
+          fontSrc: [`'self'`, 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'data:'],
+          connectSrc: [`'self'`, 'api.scalar.com'],
+        },
+      },
+    }),
+  );
+
+
 
   const configService = app.get(ConfigService);
 
