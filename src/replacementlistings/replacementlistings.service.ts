@@ -4,6 +4,11 @@ import type { FindReplacementListingsDto } from './dto/find-replacementlistings.
 import { toReplacementListingDto } from './replacementlisting.mapper';
 import type { CreateReplacementListingDto } from './dto/create-replacementlisting.dto';
 import type { UpdateReplacementListingDto } from './dto/update-replacementlisting.dto';
+import { parseLimit } from '../common/config-limits';
+import type { ListingStatus } from '../generated/prisma/enums';
+
+const MAX_ACTIVE_LISTINGS_PER_PROFILE = parseLimit(process.env.MAX_ACTIVE_LISTINGS_PER_PROFILE);
+const ACTIVE_LISTING_STATUSES: ListingStatus[]= ['DRAFT', 'OPEN', 'IN_DISCUSSION', 'FULL', 'FILLED'] as const;
 
 @Injectable()
 export class ReplacementlistingsService {
@@ -30,6 +35,16 @@ export class ReplacementlistingsService {
 
     if (practice.ownerId !== profileId) {
       throw new ForbiddenException('You do not own this practice');
+    }
+
+    if (MAX_ACTIVE_LISTINGS_PER_PROFILE) {
+      const count = await this.prisma.replacementListing.count({
+        where: { createdById: profileId, status: { in: ACTIVE_LISTING_STATUSES } },
+      });
+
+      if (count >= MAX_ACTIVE_LISTINGS_PER_PROFILE) {
+        throw new BadRequestException(`You cannot have more than ${MAX_ACTIVE_LISTINGS_PER_PROFILE} active listings`);
+      }
     }
 
     const listing = await this.prisma.replacementListing.create({

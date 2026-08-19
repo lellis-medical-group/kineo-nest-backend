@@ -1,16 +1,14 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, UseGuards } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FindProfilesDto } from './dto/find-profiles.dto';
 import { Prisma } from '../generated/prisma/client';
-import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
 
 @Injectable()
 export class ProfileService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) { }
 
-  @UseGuards(EmailVerifiedGuard)
   async create(userId: string, createProfileDto: CreateProfileDto) {
     const existing = await this.prisma.profile.findUnique({ where: { userId } });
 

@@ -1,9 +1,11 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException, UseGuards } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
 import { PrismaService } from '../prisma.service';
 import type { FindPracticesDto } from './dto/find-practices.dto';
-import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
+import { parseLimit } from '../common/config-limits';
+
+const MAX_PRACTICES_PER_PROFILE = parseLimit(process.env.MAX_PRACTICES_PER_PROFILE);
 
 @Injectable()
 export class PracticesService {
@@ -29,9 +31,16 @@ export class PracticesService {
     return profile?.id;
   }
 
-  @UseGuards(EmailVerifiedGuard)
   async create(userId: string, createPracticeDto: CreatePracticeDto) {
     const ownerId = await this.getOwnedProfileId(userId);
+
+    if (MAX_PRACTICES_PER_PROFILE) {
+      const count = await this.prisma.practice.count({ where: { ownerId } });
+
+      if (count >= MAX_PRACTICES_PER_PROFILE) {
+        throw new BadRequestException(`You cannot create more than ${MAX_PRACTICES_PER_PROFILE} practices`);
+      }
+    }
 
     return this.prisma.practice.create({
       data: { ...createPracticeDto, ownerId },
