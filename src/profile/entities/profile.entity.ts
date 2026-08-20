@@ -1,6 +1,6 @@
-import { createZodDto } from 'nestjs-zod';
-import { z } from 'zod';
-import { ProfileType, Specialty } from '../../generated/prisma/enums';
+import { createZodDto } from "nestjs-zod";
+import { z } from "zod";
+import { ProfileType, Specialty } from "../../generated/prisma/enums";
 
 export const ProfileSchema = z.object({
   id: z.string(),

@@ -1,12 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Inject } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+} from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { UsersService } from "./users.service";
 
-@Controller('users')
+@Controller("users")
 export class UsersController {
-  constructor(@Inject(UsersService) private readonly usersService: UsersService) { }
+  constructor(
+    @Inject(UsersService) private readonly usersService: UsersService,
+  ) {}
 
   // @Post()
   // create(@Body() createUserDto: CreateUserDto) {

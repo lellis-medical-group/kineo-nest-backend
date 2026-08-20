@@ -1,19 +1,27 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { FindProfilesDto } from './dto/find-profiles.dto';
-import { Prisma } from '../generated/prisma/client';
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { Prisma } from "../generated/prisma/client";
+import { PrismaService } from "../prisma.service";
+import { CreateProfileDto } from "./dto/create-profile.dto";
+import { FindProfilesDto } from "./dto/find-profiles.dto";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
 
 @Injectable()
 export class ProfileService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) { }
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async create(userId: string, createProfileDto: CreateProfileDto) {
-    const existing = await this.prisma.profile.findUnique({ where: { userId } });
+    const existing = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
 
     if (existing) {
-      throw new ConflictException('Profile already exists for this user');
+      throw new ConflictException("Profile already exists for this user");
     }
 
     try {
@@ -21,8 +29,11 @@ export class ProfileService {
         data: { ...createProfileDto, userId },
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('RPPS number already in use');
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ConflictException("RPPS number already in use");
       }
       throw error;
     }
@@ -57,7 +68,7 @@ export class ProfileService {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
 
     if (!profile) {
-      throw new NotFoundException('No profile found for this user');
+      throw new NotFoundException("No profile found for this user");
     }
 
     return profile;
@@ -76,8 +87,11 @@ export class ProfileService {
         data: updateProfileDto,
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException('RPPS number already in use');
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ConflictException("RPPS number already in use");
       }
       throw error;
     }

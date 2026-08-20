@@ -64,7 +64,9 @@ export function notificationEmailTemplate({
         <p style="padding:0 0 15px 0; margin:0;">Bonjour <strong>${displayName}</strong>,</p>
         <p style="padding:0 0 25px 0; margin:0;">${message}</p>
 
-        ${url && ctaLabel ? `
+        ${
+          url && ctaLabel
+            ? `
         <table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin:0 0 25px 0;">
           <tr>
             <td align="center" style="background-color:#2563eb; padding:12px 28px; border-radius:6px;" bgcolor="#2563eb">
@@ -72,7 +74,9 @@ export function notificationEmailTemplate({
             </td>
           </tr>
         </table>
-        ` : ''}
+        `
+            : ""
+        }
       </td>
     </tr>
     <tr>

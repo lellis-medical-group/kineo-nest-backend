@@ -1,7 +1,7 @@
 import { sendEmail } from "./mailer";
-import { verificationEmailTemplate } from "./templates/verification";
-import { resetPasswordEmailTemplate } from "./templates/reset-password";
 import { notificationEmailTemplate } from "./templates/notification";
+import { resetPasswordEmailTemplate } from "./templates/reset-password";
+import { verificationEmailTemplate } from "./templates/verification";
 
 export async function sendVerificationEmail({
   email,

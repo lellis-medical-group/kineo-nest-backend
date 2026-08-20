@@ -1,16 +1,14 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto.js';
-import { UpdateUserDto } from './dto/update-user.dto.js';
-import { PrismaService } from '../prisma.service.js';
+import { Inject, Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma.service.js";
+import { CreateUserDto } from "./dto/create-user.dto.js";
+import { UpdateUserDto } from "./dto/update-user.dto.js";
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @Inject(PrismaService) private readonly prisma: PrismaService
-  ) { }
-  
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
   create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+    return "This action adds a new user";
   }
 
   findAll() {

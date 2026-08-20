@@ -1,14 +1,13 @@
 import { Controller, Get } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { ApiTags, ApiOperation } from "@nestjs/swagger";
 
-@ApiTags('App')
+@ApiTags("App")
 @Controller()
 export class AppController {
-
   @AllowAnonymous()
   @Get()
-  @ApiOperation({ summary: 'Get API welcome message' })
+  @ApiOperation({ summary: "Get API welcome message" })
   getRoot() {
     return {
       message: "hello",
@@ -17,7 +16,7 @@ export class AppController {
 
   @AllowAnonymous()
   @Get("ping")
-  @ApiOperation({ summary: 'Health check endpoint' })
+  @ApiOperation({ summary: "Health check endpoint" })
   ping() {
     return "pong";
   }

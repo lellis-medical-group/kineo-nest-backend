@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies with Bun
-RUN bun install
+RUN bun install --frozen-lockfile
 
 # Copy the rest of the application source code
 COPY . .
@@ -23,4 +23,4 @@ RUN bun run build
 EXPOSE 3000
 
 # Start the application with Bun
-CMD ["bun", "dist/main.js"]
+CMD ["sh", "-c", "bunx --bun prisma migrate deploy && bun dist/main.js"]
