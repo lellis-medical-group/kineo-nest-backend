@@ -1,5 +1,5 @@
-import { createZodDto } from 'nestjs-zod';
-import { CreateProfileSchema } from './create-profile.dto';
+import { createZodDto } from "nestjs-zod";
+import { CreateProfileSchema } from "./create-profile.dto";
 
 export const UpdateProfileSchema = CreateProfileSchema.partial();
 

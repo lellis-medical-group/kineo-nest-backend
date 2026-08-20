@@ -1,6 +1,6 @@
-import { createZodDto } from 'nestjs-zod';
-import { z } from 'zod';
-import { ListingStatus, Specialty } from '../../generated/prisma/enums';
+import { createZodDto } from "nestjs-zod";
+import { z } from "zod";
+import { ListingStatus, Specialty } from "../../generated/prisma/enums";
 
 export const ReplacementListingSchema = z.object({
   id: z.string(),
@@ -18,7 +18,9 @@ export const ReplacementListingSchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 
-export class ReplacementListing extends createZodDto(ReplacementListingSchema) { }
+export class ReplacementListing extends createZodDto(
+  ReplacementListingSchema,
+) {}
 
 export const PaginatedReplacementListingsSchema = z.object({
   data: z.array(ReplacementListingSchema),
@@ -30,4 +32,6 @@ export const PaginatedReplacementListingsSchema = z.object({
   }),
 });
 
-export class PaginatedReplacementListings extends createZodDto(PaginatedReplacementListingsSchema) { }
+export class PaginatedReplacementListings extends createZodDto(
+  PaginatedReplacementListingsSchema,
+) {}

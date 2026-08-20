@@ -4,17 +4,17 @@ FROM oven/bun:1
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy the package configuration files
-COPY package*.json ./
+# Copy the dependency manifest and lockfile before installing dependencies.
+COPY package.json bun.lock ./
 
 # Install dependencies with Bun
-RUN bun install
+RUN bun install --frozen-lockfile
 
 # Copy the rest of the application source code
 COPY . .
 
 # Generate the Prisma client with Bun
-RUN bun x prisma generate
+RUN bunx --bun prisma generate
 
 # Build the application
 RUN bun run build
@@ -23,4 +23,4 @@ RUN bun run build
 EXPOSE 3000
 
 # Start the application with Bun
-CMD ["bun", "dist/main.js"]
+CMD ["sh", "-c", "bunx --bun prisma migrate deploy && bun dist/main.js"]

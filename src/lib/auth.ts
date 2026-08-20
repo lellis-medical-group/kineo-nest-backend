@@ -1,8 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { createPrismaClient } from "./prisma";
-import { openAPI, jwt } from "better-auth/plugins";
+import { jwt, openAPI } from "better-auth/plugins";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
+import { createPrismaClient } from "./prisma";
 
 const prisma = createPrismaClient();
 
@@ -21,19 +21,19 @@ export const auth = betterAuth({
     openAPI(),
     ...(jwtEnabled
       ? [
-        jwt({
-          jwt: {
-            expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
-            issuer: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-            audience: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-          },
-          jwks: {
-            rotationInterval: process.env.JWT_ROTATION_INTERVAL
-              ? Number(process.env.JWT_ROTATION_INTERVAL)
-              : undefined,
-          },
-        }),
-      ]
+          jwt({
+            jwt: {
+              expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
+              issuer: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+              audience: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+            },
+            jwks: {
+              rotationInterval: process.env.JWT_ROTATION_INTERVAL
+                ? Number(process.env.JWT_ROTATION_INTERVAL)
+                : undefined,
+            },
+          }),
+        ]
       : []),
   ],
 
@@ -41,7 +41,9 @@ export const auth = betterAuth({
 
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
 
-  trustedOrigins: (process.env.TRUSTED_ORIGINS || "").split(",").filter(Boolean),
+  trustedOrigins: (process.env.TRUSTED_ORIGINS || "")
+    .split(",")
+    .filter(Boolean),
 
   rateLimit: {
     enabled: true,

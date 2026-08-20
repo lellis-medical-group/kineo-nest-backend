@@ -1,21 +1,31 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { CreatePracticeDto } from './dto/create-practice.dto';
-import { UpdatePracticeDto } from './dto/update-practice.dto';
-import { PrismaService } from '../prisma.service';
-import type { FindPracticesDto } from './dto/find-practices.dto';
-import { parseLimit } from '../common/config-limits';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { runSerializableTransaction } from "../common/serializable-transaction";
+import { PrismaService } from "../prisma.service";
+import { CreatePracticeDto } from "./dto/create-practice.dto";
+import type { FindPracticesDto } from "./dto/find-practices.dto";
+import { UpdatePracticeDto } from "./dto/update-practice.dto";
 
-const MAX_PRACTICES_PER_PROFILE = parseLimit(process.env.MAX_PRACTICES_PER_PROFILE);
+const EARTH_RADIUS_KM = 6_371;
 
 @Injectable()
 export class PracticesService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) { }
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
 
   private async getOwnedProfileId(userId: string) {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
 
     if (!profile) {
-      throw new NotFoundException('No profile found for this user');
+      throw new NotFoundException("No profile found for this user");
     }
 
     return profile.id;
@@ -33,17 +43,18 @@ export class PracticesService {
 
   async create(userId: string, createPracticeDto: CreatePracticeDto) {
     const ownerId = await this.getOwnedProfileId(userId);
-
-    if (MAX_PRACTICES_PER_PROFILE) {
-      const count = await this.prisma.practice.count({ where: { ownerId } });
-
-      if (count >= MAX_PRACTICES_PER_PROFILE) {
-        throw new BadRequestException(`You cannot create more than ${MAX_PRACTICES_PER_PROFILE} practices`);
+    const maxPractices = this.config.get<number>("limits.practicesPerProfile");
+    return runSerializableTransaction(this.prisma, async (tx) => {
+      if (maxPractices) {
+        const count = await tx.practice.count({ where: { ownerId } });
+        if (count >= maxPractices) {
+          throw new BadRequestException(
+            `You cannot create more than ${maxPractices} practices`,
+          );
+        }
       }
-    }
 
-    return this.prisma.practice.create({
-      data: { ...createPracticeDto, ownerId },
+      return tx.practice.create({ data: { ...createPracticeDto, ownerId } });
     });
   }
 
@@ -54,51 +65,53 @@ export class PracticesService {
     const skip = (page - 1) * limit;
 
     if (lat !== undefined && lng !== undefined && radiusKm !== undefined) {
-      const [practices, countResult] = await Promise.all([
-        this.prisma.$queryRaw<any[]>`
-        SELECT * FROM (
-          SELECT *, (
-            6371 * acos(
-              cos(radians(${lat})) * cos(radians(latitude)) *
-              cos(radians(longitude) - radians(${lng})) +
-              sin(radians(${lat})) * sin(radians(latitude))
-            )
-          ) AS distance
-          FROM practice
-          WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND "isPublic" = true
-        ) sub
-        WHERE distance <= ${radiusKm}
-        ORDER BY distance ASC
-        LIMIT ${limit} OFFSET ${skip}
-      `,
-        this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) FROM (
-          SELECT *, (
-            6371 * acos(
-              cos(radians(${lat})) * cos(radians(latitude)) *
-              cos(radians(longitude) - radians(${lng})) +
-              sin(radians(${lat})) * sin(radians(latitude))
-            )
-          ) AS distance
-          FROM practice
-          WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND "isPublic" = true
-        ) sub
-        WHERE distance <= ${radiusKm}
-      `,
-      ]);
+      const latitudeDelta = (radiusKm / EARTH_RADIUS_KM) * (180 / Math.PI);
+      const longitudeDelta =
+        latitudeDelta / Math.max(Math.cos((lat * Math.PI) / 180), 0.01);
 
-      const total = Number(countResult[0].count);
+      const candidates = await this.prisma.practice.findMany({
+        where: {
+          isPublic: true,
+          latitude: {
+            not: null,
+            gte: lat - latitudeDelta,
+            lte: lat + latitudeDelta,
+          },
+          longitude: {
+            not: null,
+            gte: lng - longitudeDelta,
+            lte: lng + longitudeDelta,
+          },
+        },
+      });
+
+      const practices = candidates
+        .map((practice) => ({
+          practice,
+          distance: this.distanceInKm(
+            lat,
+            lng,
+            practice.latitude!,
+            practice.longitude!,
+          ),
+        }))
+        .filter(({ distance }) => distance <= radiusKm)
+        .sort((left, right) => left.distance - right.distance);
+
+      const total = practices.length;
 
       return {
-        data: practices,
+        data: practices
+          .slice(skip, skip + limit)
+          .map(({ practice }) => practice),
         meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
       };
     }
 
     const where = {
       isPublic: true,
-      ...(name && { name: { contains: name, mode: 'insensitive' as const } }),
-      ...(city && { city: { contains: city, mode: 'insensitive' as const } }),
+      ...(name && { name: { contains: name, mode: "insensitive" as const } }),
+      ...(city && { city: { contains: city, mode: "insensitive" as const } }),
     };
 
     const [data, total] = await Promise.all([
@@ -110,6 +123,19 @@ export class PracticesService {
       data,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  private distanceInKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+    const latitudeDelta = toRadians(lat2 - lat1);
+    const longitudeDelta = toRadians(lng2 - lng1);
+    const haversine =
+      Math.sin(latitudeDelta / 2) ** 2 +
+      Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(longitudeDelta / 2) ** 2;
+
+    return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(haversine));
   }
 
   async findMine(userId: string) {
@@ -136,7 +162,11 @@ export class PracticesService {
     return practice;
   }
 
-  async update(id: string, userId: string, updatePracticeDto: UpdatePracticeDto) {
+  async update(
+    id: string,
+    userId: string,
+    updatePracticeDto: UpdatePracticeDto,
+  ) {
     const practice = await this.findOne(id, userId);
     const ownerId = await this.getOwnedProfileId(userId);
 

@@ -1,31 +1,45 @@
 import { Module } from "@nestjs/common";
-import { AppController } from "./app.controller";
-import { PrismaService } from "./prisma.service";
-import { AuthModule } from "@thallesp/nestjs-better-auth";
-import { auth } from './lib/auth'
-import { UsersModule } from './users/users.module';
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { ProfileModule } from './profile/profile.module';
-import configuration from "./config/configuration";
-import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { AuthModule } from "@thallesp/nestjs-better-auth";
 import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod";
-import { PracticesModule } from './practices/practices.module';
-import { ReplacementlistingsModule } from './replacementlistings/replacementlistings.module';
-import { ApplicationsModule } from './applications/applications.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { AppController } from "./app.controller";
+import { ApplicationsModule } from "./applications/applications.module";
+import { HttpExceptionFilter } from "./common/filters/http-exception/http-exception.filter";
 import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-proxy.guard";
+import configuration from "./config/configuration";
+import { auth } from "./lib/auth";
+import { PracticesModule } from "./practices/practices.module";
+import { PrismaModule } from "./prisma.module";
+import { ProfileModule } from "./profile/profile.module";
+import { ReplacementlistingsModule } from "./replacementlistings/replacementlistings.module";
+import { UsersModule } from "./users/users.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    PrismaModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         throttlers: [
-          { name: 'short', ttl: config.get<number>('throttle.short.ttl', 1000), limit: config.get<number>('throttle.short.limit', 5) },
-          { name: 'medium', ttl: config.get<number>('throttle.medium.ttl', 10000), limit: config.get<number>('throttle.medium.limit', 30) },
-          { name: 'long', ttl: config.get<number>('throttle.long.ttl', 60000), limit: config.get<number>('throttle.long.limit', 150) },
+          {
+            name: "short",
+            ttl: config.get<number>("throttle.short.ttl", 1000),
+            limit: config.get<number>("throttle.short.limit", 5),
+          },
+          {
+            name: "medium",
+            ttl: config.get<number>("throttle.medium.ttl", 10000),
+            limit: config.get<number>("throttle.medium.limit", 30),
+          },
+          {
+            name: "long",
+            ttl: config.get<number>("throttle.long.ttl", 60000),
+            limit: config.get<number>("throttle.long.limit", 150),
+          },
         ],
       }),
     }),
@@ -38,10 +52,10 @@ import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-prox
   ],
   controllers: [AppController],
   providers: [
-    PrismaService,
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: ZodSerializerInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerBehindProxyGuard },
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -1,6 +1,11 @@
-import { createPrismaClient } from "../src/lib/prisma";
 import { hashPassword } from "better-auth/crypto";
-import { ProfileType, Specialty, ListingStatus, ApplicationStatus } from "../src/generated/prisma/enums";
+import {
+  ApplicationStatus,
+  ListingStatus,
+  ProfileType,
+  Specialty,
+} from "../src/generated/prisma/enums";
+import { createPrismaClient } from "../src/lib/prisma";
 
 const prisma = createPrismaClient();
 
@@ -27,9 +32,52 @@ async function main() {
 
   console.log("--- Creating users, Better Auth accounts, and profiles ---");
 
-  const firstNames = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy", "Kevin", "Lara", "Mallory", "Nancy", "Oscar"];
-  const lastNames = ["Martin", "Durand", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Leroy", "Moreau", "Simon", "Laurent", "Lefebvre", "Michel", "Garcia", "David"];
-  const cities = ["Paris", "Lyon", "Marseille", "Toulouse", "Nice", "Nantes", "Strasbourg", "Montpellier", "Bordeaux", "Lille"];
+  const firstNames = [
+    "Alice",
+    "Bob",
+    "Charlie",
+    "David",
+    "Eve",
+    "Frank",
+    "Grace",
+    "Heidi",
+    "Ivan",
+    "Judy",
+    "Kevin",
+    "Lara",
+    "Mallory",
+    "Nancy",
+    "Oscar",
+  ];
+  const lastNames = [
+    "Martin",
+    "Durand",
+    "Dubois",
+    "Thomas",
+    "Robert",
+    "Richard",
+    "Petit",
+    "Leroy",
+    "Moreau",
+    "Simon",
+    "Laurent",
+    "Lefebvre",
+    "Michel",
+    "Garcia",
+    "David",
+  ];
+  const cities = [
+    "Paris",
+    "Lyon",
+    "Marseille",
+    "Toulouse",
+    "Nice",
+    "Nantes",
+    "Strasbourg",
+    "Montpellier",
+    "Bordeaux",
+    "Lille",
+  ];
   const specialties = Object.values(Specialty);
   const profileTypes = Object.values(ProfileType);
 
@@ -84,7 +132,11 @@ async function main() {
   console.log("--- Creating medical practices ---");
 
   const createdPractices = [];
-  const practiceOwners = createdProfiles.filter(p => p.profileType === ProfileType.INSTALLED || p.profileType === ProfileType.BOTH);
+  const practiceOwners = createdProfiles.filter(
+    (p) =>
+      p.profileType === ProfileType.INSTALLED ||
+      p.profileType === ProfileType.BOTH,
+  );
 
   for (let i = 0; i < practiceOwners.length; i++) {
     const owner = practiceOwners[i];
@@ -107,14 +159,20 @@ async function main() {
   console.log("--- Creating replacement listings ---");
 
   const createdListings = [];
-  const listingStatuses = [ListingStatus.DRAFT, ListingStatus.OPEN, ListingStatus.OPEN, ListingStatus.OPEN, ListingStatus.FILLED];
+  const listingStatuses = [
+    ListingStatus.DRAFT,
+    ListingStatus.OPEN,
+    ListingStatus.OPEN,
+    ListingStatus.OPEN,
+    ListingStatus.FILLED,
+  ];
 
   for (let i = 0; i < createdPractices.length; i++) {
     const practice = createdPractices[i];
     const ownerProfile = practiceOwners[i];
 
     for (let j = 0; j < 2; j++) {
-      const startDays = 10 + (i * 5) + (j * 20);
+      const startDays = 10 + i * 5 + j * 20;
       const durationDays = 3 + Math.floor(Math.random() * 10);
 
       const listing = await prisma.replacementListing.create({
@@ -126,7 +184,7 @@ async function main() {
           specialty: ownerProfile.specialty,
           status: getRandomItem(listingStatuses),
           urgent: j === 0 && i % 2 === 0,
-          description: `Looking for a replacement for practice ${practice.name}. Position ${j === 0 ? 'urgent' : 'planned'}.`,
+          description: `Looking for a replacement for practice ${practice.name}. Position ${j === 0 ? "urgent" : "planned"}.`,
           maxApplications: 5 + j,
         },
       });
@@ -136,8 +194,18 @@ async function main() {
 
   console.log("--- Creating applications ---");
 
-  const applicants = createdProfiles.filter(p => p.profileType === ProfileType.REPLACEMENT || p.profileType === ProfileType.BOTH);
-  const applicationStatuses = [ApplicationStatus.PENDING, ApplicationStatus.PENDING, ApplicationStatus.SHORTLISTED, ApplicationStatus.ACCEPTED, ApplicationStatus.REJECTED];
+  const applicants = createdProfiles.filter(
+    (p) =>
+      p.profileType === ProfileType.REPLACEMENT ||
+      p.profileType === ProfileType.BOTH,
+  );
+  const applicationStatuses = [
+    ApplicationStatus.PENDING,
+    ApplicationStatus.PENDING,
+    ApplicationStatus.SHORTLISTED,
+    ApplicationStatus.ACCEPTED,
+    ApplicationStatus.REJECTED,
+  ];
 
   let applicationsCreated = 0;
   const maxApplications = 40;
@@ -151,13 +219,15 @@ async function main() {
         listingId_applicantId: {
           listingId: listing.id,
           applicantId: applicant.id,
-        }
-      }
+        },
+      },
     });
 
     if (!existing) {
       const status = getRandomItem(applicationStatuses);
-      const isResponded = status === ApplicationStatus.ACCEPTED || status === ApplicationStatus.REJECTED;
+      const isResponded =
+        status === ApplicationStatus.ACCEPTED ||
+        status === ApplicationStatus.REJECTED;
 
       await prisma.application.create({
         data: {
@@ -167,7 +237,7 @@ async function main() {
           message: `Hello, I am interested in this replacement listing from ${listing.startDate.toLocaleDateString()} to ${listing.endDate.toLocaleDateString()}.`,
           viewedAt: status !== ApplicationStatus.PENDING ? new Date() : null,
           respondedAt: isResponded ? new Date() : null,
-        }
+        },
       });
       applicationsCreated++;
     }
@@ -178,7 +248,9 @@ async function main() {
   console.log(`- ${createdPractices.length} practices created.`);
   console.log(`- ${createdListings.length} listings created.`);
   console.log(`- ${applicationsCreated} applications created.`);
-  console.log("You can log in with any generated email (e.g., alice.martin@medecin.fr) and the password: Password123!");
+  console.log(
+    "You can log in with any generated email (e.g., alice.martin@medecin.fr) and the password: Password123!",
+  );
 }
 
 main()
