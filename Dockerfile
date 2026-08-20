@@ -4,8 +4,8 @@ FROM oven/bun:1
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Copy the package configuration files
-COPY package*.json ./
+# Copy the dependency manifest and lockfile before installing dependencies.
+COPY package.json bun.lock ./
 
 # Install dependencies with Bun
 RUN bun install --frozen-lockfile
@@ -14,7 +14,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 # Generate the Prisma client with Bun
-RUN bun x prisma generate
+RUN bunx --bun prisma generate
 
 # Build the application
 RUN bun run build
