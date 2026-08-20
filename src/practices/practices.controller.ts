@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { Session, AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -9,6 +9,7 @@ import { CreatePracticeDto } from './dto/create-practice.dto';
 import { UpdatePracticeDto } from './dto/update-practice.dto';
 import { FindPracticesDto } from './dto/find-practices.dto';
 import { PaginatedPractices, Practice } from './entities/practice.entity';
+import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
 
 @ApiTags('Practices')
 @Controller('practices')
@@ -16,9 +17,11 @@ export class PracticesController {
   constructor(private readonly practicesService: PracticesService) { }
 
   @Post()
+  @UseGuards(EmailVerifiedGuard)
   @Throttle({ medium: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: "Create a practice owned by the current user's profile" })
   @ApiResponse({ status: 201, description: 'Practice created' })
+  @ApiResponse({ status: 403, description: 'Email not verified' })
   @ZodSerializerDto(Practice)
   create(@Session() session: UserSession, @Body() createPracticeDto: CreatePracticeDto) {
     return this.practicesService.create(session.user.id, createPracticeDto);

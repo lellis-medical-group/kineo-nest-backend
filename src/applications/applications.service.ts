@@ -7,8 +7,10 @@ import { WithdrawApplicationDto } from './dto/withdraw-application.dto';
 import type { FindApplicationsDto } from './dto/find-applications.dto';
 import { ApplicationStatus, Prisma } from '../generated/prisma/client';
 import { toApplicationDto } from './application.mapper';
+import { parseLimit } from '../common/config-limits';
 
 const ACTIVE_STATUSES: ApplicationStatus[] = ['PENDING', 'SHORTLISTED'];
+const MAX_ACTIVE_APPLICATIONS_PER_PROFILE = parseLimit(process.env.MAX_ACTIVE_APPLICATIONS_PER_PROFILE);
 
 @Injectable()
 export class ApplicationsService {
@@ -58,6 +60,16 @@ export class ApplicationsService {
 
     if (profile.profileType === 'INSTALLED') {
       throw new ForbiddenException('Only replacement profiles can apply to listings');
+    }
+
+    if (MAX_ACTIVE_APPLICATIONS_PER_PROFILE) {
+      const activeCount = await this.prisma.application.count({
+        where: { applicantId: profile.id, status: { in: ACTIVE_STATUSES } },
+      });
+
+      if (activeCount >= MAX_ACTIVE_APPLICATIONS_PER_PROFILE) {
+        throw new BadRequestException(`You cannot have more than ${MAX_ACTIVE_APPLICATIONS_PER_PROFILE} active applications`);
+      }
     }
 
     const listing = await this.prisma.replacementListing.findUnique({ where: { id: dto.listingId } });

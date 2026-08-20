@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { Session, AllowAnonymous, OptionalAuth } from '@thallesp/nestjs-better-auth';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -9,6 +9,7 @@ import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FindProfilesDto } from './dto/find-profiles.dto';
 import { Profile, PublicProfile } from './entities/profile.entity';
+import { EmailVerifiedGuard } from '../common/guards/email-verified.guard';
 
 @ApiTags('Profile')
 @Controller('profile')
@@ -16,9 +17,11 @@ export class ProfileController {
   constructor(private readonly profileService: ProfileService) { }
 
   @Post()
+  @UseGuards(EmailVerifiedGuard)
   @Throttle({ medium: { limit: 5, ttl: 10000 } })
   @ApiOperation({ summary: 'Create a professional profile for the current user' })
   @ApiResponse({ status: 201, description: 'Profile created' })
+  @ApiResponse({ status: 403, description: 'Email not verified' })
   @ApiResponse({ status: 409, description: 'Profile already exists or RPPS number already in use' })
   @ZodSerializerDto(Profile)
   create(@Session() session: UserSession, @Body() createProfileDto: CreateProfileDto) {
