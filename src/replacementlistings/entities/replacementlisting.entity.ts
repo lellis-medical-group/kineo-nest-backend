@@ -13,6 +13,7 @@ export const ReplacementListingSchema = z.object({
   urgent: z.boolean(),
   description: z.string().nullable(),
   maxApplications: z.number().nullable(),
+  applicationsCount: z.number(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

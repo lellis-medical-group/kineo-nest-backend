@@ -5,10 +5,17 @@ import { toReplacementListingDto } from './replacementlisting.mapper';
 import type { CreateReplacementListingDto } from './dto/create-replacementlisting.dto';
 import type { UpdateReplacementListingDto } from './dto/update-replacementlisting.dto';
 import { parseLimit } from '../common/config-limits';
-import type { ListingStatus } from '../generated/prisma/enums';
+import type { ApplicationStatus, ListingStatus } from '../generated/prisma/enums';
 
 const MAX_ACTIVE_LISTINGS_PER_PROFILE = parseLimit(process.env.MAX_ACTIVE_LISTINGS_PER_PROFILE);
-const ACTIVE_LISTING_STATUSES: ListingStatus[]= ['DRAFT', 'OPEN', 'IN_DISCUSSION', 'FULL', 'FILLED'] as const;
+const ACTIVE_LISTING_STATUSES: ListingStatus[] = ['DRAFT', 'OPEN', 'IN_DISCUSSION', 'FULL', 'FILLED'];
+const ACTIVE_APPLICATION_STATUSES: ApplicationStatus[] = ['PENDING', 'SHORTLISTED'];
+
+const APPLICATIONS_COUNT_INCLUDE = {
+  _count: {
+    select: { applications: { where: { status: { in: ACTIVE_APPLICATION_STATUSES } } } },
+  },
+};
 
 @Injectable()
 export class ReplacementlistingsService {
@@ -22,6 +29,11 @@ export class ReplacementlistingsService {
     }
 
     return profile.id;
+  }
+
+  private withCount<T extends { _count: { applications: number } }>(listing: T) {
+    const { _count, ...rest } = listing;
+    return { ...rest, applicationsCount: _count.applications };
   }
 
   async create(userId: string, dto: CreateReplacementListingDto) {
@@ -59,7 +71,7 @@ export class ReplacementlistingsService {
       },
     });
 
-    return toReplacementListingDto(listing);
+    return toReplacementListingDto({ ...listing, applicationsCount: 0 });
   }
 
   async findAll(filters: FindReplacementListingsDto) {
@@ -83,12 +95,12 @@ export class ReplacementlistingsService {
     };
 
     const [data, total] = await Promise.all([
-      this.prisma.replacementListing.findMany({ where, skip, take: limit }),
+      this.prisma.replacementListing.findMany({ where, skip, take: limit, include: APPLICATIONS_COUNT_INCLUDE }),
       this.prisma.replacementListing.count({ where }),
     ]);
 
     return {
-      data: data.map(toReplacementListingDto),
+      data: data.map((listing) => toReplacementListingDto(this.withCount(listing))),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -96,13 +108,19 @@ export class ReplacementlistingsService {
   async findMine(userId: string) {
     const profileId = await this.getOwnedProfileId(userId);
 
-    const listings = await this.prisma.replacementListing.findMany({ where: { createdById: profileId } });
+    const listings = await this.prisma.replacementListing.findMany({
+      where: { createdById: profileId },
+      include: APPLICATIONS_COUNT_INCLUDE,
+    });
 
-    return listings.map(toReplacementListingDto);
+    return listings.map((listing) => toReplacementListingDto(this.withCount(listing)));
   }
 
   async findOne(id: string, requesterUserId?: string) {
-    const listing = await this.prisma.replacementListing.findUnique({ where: { id } });
+    const listing = await this.prisma.replacementListing.findUnique({
+      where: { id },
+      include: APPLICATIONS_COUNT_INCLUDE,
+    });
 
     if (!listing) {
       throw new NotFoundException(`Replacement listing ${id} not found`);
@@ -116,7 +134,7 @@ export class ReplacementlistingsService {
       }
     }
 
-    return toReplacementListingDto(listing);
+    return toReplacementListingDto(this.withCount(listing));
   }
 
   private async assertOwnership(id: string, userId: string) {
@@ -147,7 +165,7 @@ export class ReplacementlistingsService {
       data: { status: 'OPEN' },
     });
 
-    return toReplacementListingDto(updated);
+    return toReplacementListingDto({ ...updated, applicationsCount: 0 });
   }
 
   async update(id: string, userId: string, dto: UpdateReplacementListingDto) {
@@ -164,9 +182,10 @@ export class ReplacementlistingsService {
         startDate: dto.startDate ? new Date(dto.startDate) : undefined,
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
       },
+      include: APPLICATIONS_COUNT_INCLUDE,
     });
 
-    return toReplacementListingDto(updated);
+    return toReplacementListingDto(this.withCount(updated));
   }
 
   async remove(id: string, userId: string) {
@@ -189,9 +208,10 @@ export class ReplacementlistingsService {
     const updated = await this.prisma.replacementListing.update({
       where: { id },
       data: { status: 'CLOSED' },
+      include: APPLICATIONS_COUNT_INCLUDE,
     });
 
-    return toReplacementListingDto(updated);
+    return toReplacementListingDto(this.withCount(updated));
   }
 
   async cancel(id: string, userId: string) {
@@ -204,8 +224,9 @@ export class ReplacementlistingsService {
     const updated = await this.prisma.replacementListing.update({
       where: { id },
       data: { status: 'CANCELLED' },
+      include: APPLICATIONS_COUNT_INCLUDE,
     });
 
-    return toReplacementListingDto(updated);
+    return toReplacementListingDto(this.withCount(updated));
   }
 }
