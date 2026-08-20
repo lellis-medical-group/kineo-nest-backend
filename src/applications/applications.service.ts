@@ -24,7 +24,7 @@ export class ApplicationsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   private async getOwnedProfile(userId: string) {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
@@ -151,7 +151,7 @@ export class ApplicationsService {
             data: {
               status:
                 listing.maxApplications &&
-                  activeListingCount + 1 >= listing.maxApplications
+                activeListingCount + 1 >= listing.maxApplications
                   ? "FULL"
                   : "IN_DISCUSSION",
             },

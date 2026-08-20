@@ -293,9 +293,7 @@ export class ReplacementlistingsService {
           where: { id },
         });
         if (!listing) {
-          throw new NotFoundException(
-            `Replacement listing ${id} not found`,
-          );
+          throw new NotFoundException(`Replacement listing ${id} not found`);
         }
 
         const profile = await tx.profile.findUnique({ where: { userId } });
