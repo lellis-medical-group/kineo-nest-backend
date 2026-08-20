@@ -286,19 +286,54 @@ export class ReplacementlistingsService {
   }
 
   async cancel(id: string, userId: string) {
-    const listing = await this.assertOwnership(id, userId);
+    const updated = await runSerializableTransaction(
+      this.prisma,
+      async (tx) => {
+        const listing = await tx.replacementListing.findUnique({
+          where: { id },
+        });
+        if (!listing) {
+          throw new NotFoundException(
+            `Replacement listing ${id} not found`,
+          );
+        }
 
-    if (listing.status === "CLOSED" || listing.status === "CANCELLED") {
-      throw new BadRequestException(
-        "This listing is already closed or cancelled",
-      );
-    }
+        const profile = await tx.profile.findUnique({ where: { userId } });
+        if (!profile) {
+          throw new NotFoundException("No profile found for this user");
+        }
 
-    const updated = await this.prisma.replacementListing.update({
-      where: { id },
-      data: { status: "CANCELLED" },
-      include: APPLICATIONS_COUNT_INCLUDE,
-    });
+        if (listing.createdById !== profile.id) {
+          throw new ForbiddenException();
+        }
+
+        if (listing.status === "CLOSED" || listing.status === "CANCELLED") {
+          throw new BadRequestException(
+            "This listing is already closed or cancelled",
+          );
+        }
+
+        const now = new Date();
+
+        await tx.application.updateMany({
+          where: {
+            listingId: id,
+            status: { in: ACTIVE_APPLICATION_STATUSES },
+          },
+          data: {
+            status: "REJECTED",
+            rejectionReason: "The listing has been cancelled",
+            respondedAt: now,
+          },
+        });
+
+        return tx.replacementListing.update({
+          where: { id },
+          data: { status: "CANCELLED" },
+          include: APPLICATIONS_COUNT_INCLUDE,
+        });
+      },
+    );
 
     return toReplacementListingDto(this.withCount(updated));
   }

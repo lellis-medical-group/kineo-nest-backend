@@ -24,7 +24,7 @@ export class ApplicationsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {}
+  ) { }
 
   private async getOwnedProfile(userId: string) {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
@@ -36,8 +36,11 @@ export class ApplicationsService {
     return profile;
   }
 
-  private async recalcListingStatus(listingId: string) {
-    const listing = await this.prisma.replacementListing.findUnique({
+  private async recalcListingStatus(
+    tx: Prisma.TransactionClient,
+    listingId: string,
+  ) {
+    const listing = await tx.replacementListing.findUnique({
       where: { id: listingId },
     });
 
@@ -50,7 +53,7 @@ export class ApplicationsService {
       return;
     }
 
-    const activeCount = await this.prisma.application.count({
+    const activeCount = await tx.application.count({
       where: { listingId, status: { in: ACTIVE_STATUSES } },
     });
 
@@ -68,7 +71,7 @@ export class ApplicationsService {
     }
 
     if (nextStatus !== listing.status) {
-      await this.prisma.replacementListing.update({
+      await tx.replacementListing.update({
         where: { id: listingId },
         data: { status: nextStatus },
       });
@@ -148,7 +151,7 @@ export class ApplicationsService {
             data: {
               status:
                 listing.maxApplications &&
-                activeListingCount + 1 >= listing.maxApplications
+                  activeListingCount + 1 >= listing.maxApplications
                   ? "FULL"
                   : "IN_DISCUSSION",
             },
@@ -370,58 +373,112 @@ export class ApplicationsService {
   }
 
   async reject(id: string, userId: string, dto: RejectApplicationDto) {
-    const { application, isOwner } = await this.assertAccess(id, userId);
+    const rejected = await runSerializableTransaction(
+      this.prisma,
+      async (tx) => {
+        const application = await tx.application.findUnique({ where: { id } });
+        if (!application) {
+          throw new NotFoundException(`Application ${id} not found`);
+        }
 
-    if (!isOwner) {
-      throw new ForbiddenException();
-    }
+        const profile = await tx.profile.findUnique({ where: { userId } });
+        if (!profile) {
+          throw new NotFoundException("No profile found for this user");
+        }
 
-    if (
-      application.status !== "PENDING" &&
-      application.status !== "SHORTLISTED"
-    ) {
-      throw new BadRequestException(
-        "Only pending or shortlisted applications can be rejected",
-      );
-    }
+        const listing = await tx.replacementListing.findUnique({
+          where: { id: application.listingId },
+        });
 
-    const updated = await this.prisma.application.update({
-      where: { id },
-      data: {
-        status: "REJECTED",
-        rejectionReason: dto.rejectionReason,
-        respondedAt: new Date(),
+        const isOwner = listing?.createdById === profile.id;
+        const isApplicant = application.applicantId === profile.id;
+
+        if (!isOwner && !isApplicant) {
+          throw new NotFoundException(`Application ${id} not found`);
+        }
+        if (!isOwner) {
+          throw new ForbiddenException();
+        }
+
+        if (
+          application.status !== "PENDING" &&
+          application.status !== "SHORTLISTED"
+        ) {
+          throw new BadRequestException(
+            "Only pending or shortlisted applications can be rejected",
+          );
+        }
+
+        const updated = await tx.application.update({
+          where: { id },
+          data: {
+            status: "REJECTED",
+            rejectionReason: dto.rejectionReason,
+            respondedAt: new Date(),
+          },
+        });
+
+        await this.recalcListingStatus(tx, application.listingId);
+
+        return updated;
       },
-    });
+    );
 
-    await this.recalcListingStatus(application.listingId);
-
-    return toApplicationDto(updated);
+    return toApplicationDto(rejected);
   }
 
   async withdraw(id: string, userId: string, dto: WithdrawApplicationDto) {
-    const { application, isApplicant } = await this.assertAccess(id, userId);
+    const withdrawn = await runSerializableTransaction(
+      this.prisma,
+      async (tx) => {
+        const application = await tx.application.findUnique({ where: { id } });
+        if (!application) {
+          throw new NotFoundException(`Application ${id} not found`);
+        }
 
-    if (!isApplicant) {
-      throw new ForbiddenException();
-    }
+        const profile = await tx.profile.findUnique({ where: { userId } });
+        if (!profile) {
+          throw new NotFoundException("No profile found for this user");
+        }
 
-    if (
-      application.status !== "PENDING" &&
-      application.status !== "SHORTLISTED"
-    ) {
-      throw new BadRequestException(
-        "Only pending or shortlisted applications can be withdrawn",
-      );
-    }
+        const listing = await tx.replacementListing.findUnique({
+          where: { id: application.listingId },
+        });
 
-    const updated = await this.prisma.application.update({
-      where: { id },
-      data: { status: "WITHDRAWN", withdrawnReason: dto.withdrawnReason },
-    });
+        const isApplicant = application.applicantId === profile.id;
+        const isOwner = listing?.createdById === profile.id;
 
-    await this.recalcListingStatus(application.listingId);
+        if (!isApplicant && !isOwner) {
+          throw new NotFoundException(`Application ${id} not found`);
+        }
+        if (!isApplicant) {
+          throw new ForbiddenException();
+        }
 
-    return toApplicationDto(updated);
+        if (
+          application.status !== "PENDING" &&
+          application.status !== "SHORTLISTED"
+        ) {
+          throw new BadRequestException(
+            "Only pending or shortlisted applications can be withdrawn",
+          );
+        }
+
+        const updated = await tx.application.update({
+          where: { id },
+          data: {
+            status: "WITHDRAWN",
+            withdrawnReason: dto.withdrawnReason,
+          },
+        });
+
+        // Recalcul du statut de l'annonce DANS la même transaction
+        await this.recalcListingStatus(tx, application.listingId);
+
+        return updated;
+      },
+    );
+
+    return toApplicationDto(withdrawn);
   }
 }
