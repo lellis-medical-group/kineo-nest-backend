@@ -1,5 +1,5 @@
-import { createZodDto } from 'nestjs-zod';
-import { CreatePracticeSchema } from './create-practice.dto';
+import { createZodDto } from "nestjs-zod";
+import { CreatePracticeSchema } from "./create-practice.dto";
 
 export const UpdatePracticeSchema = CreatePracticeSchema.partial();
 

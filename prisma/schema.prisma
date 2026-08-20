@@ -146,6 +146,7 @@ model Practice {
   listings  ReplacementListing[]
 
   @@index([ownerId])
+  @@index([latitude, longitude])
   @@map("practice")
 }
 

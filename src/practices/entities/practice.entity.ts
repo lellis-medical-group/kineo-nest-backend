@@ -1,5 +1,5 @@
-import { createZodDto } from 'nestjs-zod';
-import { z } from 'zod';
+import { createZodDto } from "nestjs-zod";
+import { z } from "zod";
 
 export const PracticeSchema = z.object({
   id: z.string(),
@@ -25,4 +25,6 @@ export const PaginatedPracticesSchema = z.object({
   }),
 });
 
-export class PaginatedPractices extends createZodDto(PaginatedPracticesSchema) {}
+export class PaginatedPractices extends createZodDto(
+  PaginatedPracticesSchema,
+) {}
