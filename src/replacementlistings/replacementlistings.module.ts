@@ -1,10 +1,9 @@
-import { Module } from '@nestjs/common';
-import { ReplacementlistingsService } from './replacementlistings.service';
-import { ReplacementlistingsController } from './replacementlistings.controller';
-import { PrismaService } from '../prisma.service';
+import { Module } from "@nestjs/common";
+import { ReplacementlistingsController } from "./replacementlistings.controller";
+import { ReplacementlistingsService } from "./replacementlistings.service";
 
 @Module({
   controllers: [ReplacementlistingsController],
-  providers: [ReplacementlistingsService, PrismaService],
+  providers: [ReplacementlistingsService],
 })
 export class ReplacementlistingsModule {}
