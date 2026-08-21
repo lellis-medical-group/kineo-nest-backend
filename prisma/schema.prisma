@@ -169,6 +169,7 @@ model ReplacementListing {
 
   @@index([practiceId])
   @@index([status])
+  @@index([createdById, status])
   @@map("replacement_listing")
 }
 
@@ -190,5 +191,7 @@ model Application {
   @@unique([listingId, applicantId])
   @@index([listingId])
   @@index([applicantId])
+  @@index([listingId, status])
+  @@index([applicantId, status])
   @@map("application")
 }
