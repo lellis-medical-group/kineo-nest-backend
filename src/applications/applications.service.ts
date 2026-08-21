@@ -7,8 +7,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { runSerializableTransaction } from "../common/serializable-transaction";
 import { getOwnedProfile, getOwnedProfileId } from "../common/profile-lookup";
+import { runSerializableTransaction } from "../common/serializable-transaction";
 import { ApplicationStatus, Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma.service";
 import { toApplicationDto } from "./application.mapper";
@@ -25,7 +25,7 @@ export class ApplicationsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   private async recalcListingStatus(
     tx: Prisma.TransactionClient,
@@ -142,7 +142,7 @@ export class ApplicationsService {
             data: {
               status:
                 listing.maxApplications &&
-                  activeListingCount + 1 >= listing.maxApplications
+                activeListingCount + 1 >= listing.maxApplications
                   ? "FULL"
                   : "IN_DISCUSSION",
             },

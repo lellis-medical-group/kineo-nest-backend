@@ -17,11 +17,11 @@ export const ProfileSchema = z.object({
   updatedAt: z.date(),
 });
 
-export class Profile extends createZodDto(ProfileSchema) { }
+export class Profile extends createZodDto(ProfileSchema) {}
 
 export const PublicProfileSchema = ProfileSchema.omit({ rppsNumber: true });
 
-export class PublicProfile extends createZodDto(PublicProfileSchema) { }
+export class PublicProfile extends createZodDto(PublicProfileSchema) {}
 
 export const PaginatedPublicProfilesSchema = z.object({
   data: z.array(PublicProfileSchema),
@@ -33,4 +33,6 @@ export const PaginatedPublicProfilesSchema = z.object({
   }),
 });
 
-export class PaginatedPublicProfiles extends createZodDto(PaginatedPublicProfilesSchema) { }
+export class PaginatedPublicProfiles extends createZodDto(
+  PaginatedPublicProfilesSchema,
+) {}

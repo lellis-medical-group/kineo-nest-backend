@@ -6,8 +6,11 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import {
+  getOwnedProfileId,
+  getOwnedProfileIdSafe,
+} from "../common/profile-lookup";
 import { runSerializableTransaction } from "../common/serializable-transaction";
-import { getOwnedProfileId, getOwnedProfileIdSafe } from "../common/profile-lookup";
 import { PrismaService } from "../prisma.service";
 import { CreatePracticeDto } from "./dto/create-practice.dto";
 import type { FindPracticesDto } from "./dto/find-practices.dto";
@@ -21,7 +24,7 @@ export class PracticesService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   async create(userId: string, createPracticeDto: CreatePracticeDto) {
     const ownerId = await getOwnedProfileId(this.prisma, userId);
@@ -115,8 +118,8 @@ export class PracticesService {
     const haversine =
       Math.sin(latitudeDelta / 2) ** 2 +
       Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(longitudeDelta / 2) ** 2;
+        Math.cos(toRadians(lat2)) *
+        Math.sin(longitudeDelta / 2) ** 2;
 
     return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(haversine));
   }

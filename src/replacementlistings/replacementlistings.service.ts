@@ -6,8 +6,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { runSerializableTransaction } from "../common/serializable-transaction";
 import { getOwnedProfileId } from "../common/profile-lookup";
+import { runSerializableTransaction } from "../common/serializable-transaction";
 import type {
   ApplicationStatus,
   ListingStatus,
@@ -43,7 +43,7 @@ export class ReplacementlistingsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   private withCount<T extends { _count: { applications: number } }>(
     listing: T,
@@ -114,13 +114,13 @@ export class ReplacementlistingsService {
       startDate:
         filters.startDateFrom || filters.startDateTo
           ? {
-            gte: filters.startDateFrom
-              ? new Date(filters.startDateFrom)
-              : undefined,
-            lte: filters.startDateTo
-              ? new Date(filters.startDateTo)
-              : undefined,
-          }
+              gte: filters.startDateFrom
+                ? new Date(filters.startDateFrom)
+                : undefined,
+              lte: filters.startDateTo
+                ? new Date(filters.startDateTo)
+                : undefined,
+            }
           : undefined,
       practice: filters.city
         ? { city: { contains: filters.city, mode: "insensitive" as const } }
@@ -170,7 +170,9 @@ export class ReplacementlistingsService {
 
     if (listing.status !== "OPEN") {
       const profileId = requesterUserId
-        ? await getOwnedProfileId(this.prisma, requesterUserId).catch(() => undefined)
+        ? await getOwnedProfileId(this.prisma, requesterUserId).catch(
+            () => undefined,
+          )
         : undefined;
 
       if (listing.createdById !== profileId) {
