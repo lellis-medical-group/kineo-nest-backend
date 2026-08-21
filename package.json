@@ -10,6 +10,7 @@
     "test": "bun test src",
     "test:watch": "bun test src --watch",
     "lint": "bunx biome check src prisma",
+    "lint:fix": "bunx biome check --write src prisma",
     "db:generate": "bunx --bun prisma generate",
     "db:push": "bunx --bun prisma db push",
     "db:migrate": "bunx --bun prisma migrate dev",
