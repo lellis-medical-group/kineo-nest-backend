@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -65,7 +66,7 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([identifier])
+  @@index([identifier], type: Hash)
   @@map("verification")
 }
 
@@ -129,6 +130,7 @@ model Profile {
   listings     ReplacementListing[] @relation("CreatedListings")
   applications Application[]
 
+  @@index([specialty], where: { isPublic: true })
   @@map("profile")
 }
 
@@ -167,8 +169,10 @@ model ReplacementListing {
   updatedAt       DateTime      @updatedAt
   applications    Application[]
 
+  @@index([createdAt(sort: Desc)], where: { status: "OPEN" }, map: "rl_open_createdAt_idx")
+  @@index([createdAt(sort: Desc)], where: { status: "IN_DISCUSSION" }, map: "rl_indisc_createdAt_idx")
   @@index([practiceId])
-  @@index([status])
+  @@index([createdById, status])
   @@map("replacement_listing")
 }
 
@@ -188,7 +192,10 @@ model Application {
   updatedAt       DateTime           @updatedAt
 
   @@unique([listingId, applicantId])
-  @@index([listingId])
   @@index([applicantId])
+  @@index([listingId, createdAt(sort: Desc)], where: { status: "PENDING" }, map: "app_listing_pending_idx")
+  @@index([listingId, createdAt(sort: Desc)], where: { status: "SHORTLISTED" }, map: "app_listing_shortlisted_idx")
+  @@index([applicantId, createdAt(sort: Desc)], where: { status: "PENDING" }, map: "app_applicant_pending_idx")
+  @@index([applicantId, createdAt(sort: Desc)], where: { status: "SHORTLISTED" }, map: "app_applicant_shortlisted_idx")
   @@map("application")
 }

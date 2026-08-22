@@ -39,15 +39,27 @@ export class ProfileService {
     }
   }
 
-  findAll(filters: FindProfilesDto) {
-    return this.prisma.profile.findMany({
-      where: {
-        isPublic: true,
-        specialty: filters.specialty,
-        profileType: filters.profileType,
-        city: filters.city,
-      },
-    });
+  async findAll(filters: FindProfilesDto) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      isPublic: true,
+      specialty: filters.specialty,
+      profileType: filters.profileType,
+      city: filters.city,
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.profile.findMany({ where, skip, take: limit }),
+      this.prisma.profile.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string, requesterUserId?: string) {

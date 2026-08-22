@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { getOwnedProfile, getOwnedProfileId } from "../common/profile-lookup";
 import { runSerializableTransaction } from "../common/serializable-transaction";
 import { ApplicationStatus, Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma.service";
@@ -25,16 +26,6 @@ export class ApplicationsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
-
-  private async getOwnedProfile(userId: string) {
-    const profile = await this.prisma.profile.findUnique({ where: { userId } });
-
-    if (!profile) {
-      throw new NotFoundException("No profile found for this user");
-    }
-
-    return profile;
-  }
 
   private async recalcListingStatus(
     tx: Prisma.TransactionClient,
@@ -79,7 +70,7 @@ export class ApplicationsService {
   }
 
   async create(userId: string, dto: CreateApplicationDto) {
-    const profile = await this.getOwnedProfile(userId);
+    const profile = await getOwnedProfile(this.prisma, userId);
 
     if (profile.profileType === "INSTALLED") {
       throw new ForbiddenException(
@@ -178,7 +169,7 @@ export class ApplicationsService {
     userId: string,
     filters: FindApplicationsDto,
   ) {
-    const profile = await this.getOwnedProfile(userId);
+    const profile = await getOwnedProfile(this.prisma, userId);
 
     const listing = await this.prisma.replacementListing.findUnique({
       where: { id: listingId },
@@ -210,7 +201,7 @@ export class ApplicationsService {
   }
 
   async findMine(userId: string) {
-    const profile = await this.getOwnedProfile(userId);
+    const profile = await getOwnedProfile(this.prisma, userId);
 
     const applications = await this.prisma.application.findMany({
       where: { applicantId: profile.id },
@@ -228,7 +219,7 @@ export class ApplicationsService {
       throw new NotFoundException(`Application ${id} not found`);
     }
 
-    const profile = await this.getOwnedProfile(userId);
+    const profile = await getOwnedProfile(this.prisma, userId);
     const listing = await this.prisma.replacementListing.findUniqueOrThrow({
       where: { id: application.listingId },
     });
@@ -312,10 +303,7 @@ export class ApplicationsService {
     const accepted = await runSerializableTransaction(
       this.prisma,
       async (tx) => {
-        const profile = await tx.profile.findUnique({ where: { userId } });
-        if (!profile) {
-          throw new NotFoundException("No profile found for this user");
-        }
+        const profileId = await getOwnedProfileId(tx, userId);
 
         const application = await tx.application.findUnique({ where: { id } });
         if (!application) {
@@ -325,7 +313,7 @@ export class ApplicationsService {
         const listing = await tx.replacementListing.findUnique({
           where: { id: application.listingId },
         });
-        if (!listing || listing.createdById !== profile.id) {
+        if (!listing || listing.createdById !== profileId) {
           throw new NotFoundException(`Application ${id} not found`);
         }
         if (!ACTIVE_STATUSES.includes(application.status)) {
@@ -381,17 +369,14 @@ export class ApplicationsService {
           throw new NotFoundException(`Application ${id} not found`);
         }
 
-        const profile = await tx.profile.findUnique({ where: { userId } });
-        if (!profile) {
-          throw new NotFoundException("No profile found for this user");
-        }
+        const profileId = await getOwnedProfileId(tx, userId);
 
         const listing = await tx.replacementListing.findUnique({
           where: { id: application.listingId },
         });
 
-        const isOwner = listing?.createdById === profile.id;
-        const isApplicant = application.applicantId === profile.id;
+        const isOwner = listing?.createdById === profileId;
+        const isApplicant = application.applicantId === profileId;
 
         if (!isOwner && !isApplicant) {
           throw new NotFoundException(`Application ${id} not found`);
@@ -436,17 +421,14 @@ export class ApplicationsService {
           throw new NotFoundException(`Application ${id} not found`);
         }
 
-        const profile = await tx.profile.findUnique({ where: { userId } });
-        if (!profile) {
-          throw new NotFoundException("No profile found for this user");
-        }
+        const profileId = await getOwnedProfileId(tx, userId);
 
         const listing = await tx.replacementListing.findUnique({
           where: { id: application.listingId },
         });
 
-        const isApplicant = application.applicantId === profile.id;
-        const isOwner = listing?.createdById === profile.id;
+        const isApplicant = application.applicantId === profileId;
+        const isOwner = listing?.createdById === profileId;
 
         if (!isApplicant && !isOwner) {
           throw new NotFoundException(`Application ${id} not found`);
@@ -472,7 +454,6 @@ export class ApplicationsService {
           },
         });
 
-        // Recalcul du statut de l'annonce DANS la même transaction
         await this.recalcListingStatus(tx, application.listingId);
 
         return updated;

@@ -22,7 +22,11 @@ import { EmailVerifiedGuard } from "../common/guards/email-verified.guard";
 import { CreateProfileDto } from "./dto/create-profile.dto";
 import { FindProfilesDto } from "./dto/find-profiles.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
-import { Profile, PublicProfile } from "./entities/profile.entity";
+import {
+  PaginatedPublicProfiles,
+  Profile,
+  PublicProfile,
+} from "./entities/profile.entity";
 import { ProfileService } from "./profile.service";
 
 @ApiTags("Profile")
@@ -53,7 +57,7 @@ export class ProfileController {
   @Get()
   @AllowAnonymous()
   @ApiOperation({ summary: "Search public profiles" })
-  @ZodSerializerDto([PublicProfile])
+  @ZodSerializerDto(PaginatedPublicProfiles)
   findAll(@Query() query: FindProfilesDto) {
     return this.profileService.findAll(query);
   }

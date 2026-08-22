@@ -6,6 +6,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import {
+  getOwnedProfileId,
+  getOwnedProfileIdSafe,
+} from "../common/profile-lookup";
 import { runSerializableTransaction } from "../common/serializable-transaction";
 import { PrismaService } from "../prisma.service";
 import { CreatePracticeDto } from "./dto/create-practice.dto";
@@ -13,6 +17,7 @@ import type { FindPracticesDto } from "./dto/find-practices.dto";
 import { UpdatePracticeDto } from "./dto/update-practice.dto";
 
 const EARTH_RADIUS_KM = 6_371;
+const MAX_GEO_CANDIDATES = 500;
 
 @Injectable()
 export class PracticesService {
@@ -21,28 +26,8 @@ export class PracticesService {
     private readonly config: ConfigService,
   ) {}
 
-  private async getOwnedProfileId(userId: string) {
-    const profile = await this.prisma.profile.findUnique({ where: { userId } });
-
-    if (!profile) {
-      throw new NotFoundException("No profile found for this user");
-    }
-
-    return profile.id;
-  }
-
-  private async getOwnedProfileIdSafe(userId?: string) {
-    if (!userId) {
-      return undefined;
-    }
-
-    const profile = await this.prisma.profile.findUnique({ where: { userId } });
-
-    return profile?.id;
-  }
-
   async create(userId: string, createPracticeDto: CreatePracticeDto) {
-    const ownerId = await this.getOwnedProfileId(userId);
+    const ownerId = await getOwnedProfileId(this.prisma, userId);
     const maxPractices = this.config.get<number>("limits.practicesPerProfile");
     return runSerializableTransaction(this.prisma, async (tx) => {
       if (maxPractices) {
@@ -83,6 +68,7 @@ export class PracticesService {
             lte: lng + longitudeDelta,
           },
         },
+        take: MAX_GEO_CANDIDATES,
       });
 
       const practices = candidates
@@ -139,7 +125,7 @@ export class PracticesService {
   }
 
   async findMine(userId: string) {
-    const ownerId = await this.getOwnedProfileId(userId);
+    const ownerId = await getOwnedProfileId(this.prisma, userId);
 
     return this.prisma.practice.findMany({ where: { ownerId } });
   }
@@ -152,7 +138,7 @@ export class PracticesService {
     }
 
     if (!practice.isPublic) {
-      const ownerId = await this.getOwnedProfileIdSafe(requesterUserId);
+      const ownerId = await getOwnedProfileIdSafe(this.prisma, requesterUserId);
 
       if (ownerId !== practice.ownerId) {
         throw new NotFoundException(`Practice ${id} not found`);
@@ -168,7 +154,7 @@ export class PracticesService {
     updatePracticeDto: UpdatePracticeDto,
   ) {
     const practice = await this.findOne(id, userId);
-    const ownerId = await this.getOwnedProfileId(userId);
+    const ownerId = await getOwnedProfileId(this.prisma, userId);
 
     if (practice.ownerId !== ownerId) {
       throw new ForbiddenException();
@@ -182,7 +168,7 @@ export class PracticesService {
 
   async remove(id: string, userId: string) {
     const practice = await this.findOne(id, userId);
-    const ownerId = await this.getOwnedProfileId(userId);
+    const ownerId = await getOwnedProfileId(this.prisma, userId);
 
     if (practice.ownerId !== ownerId) {
       throw new ForbiddenException();
