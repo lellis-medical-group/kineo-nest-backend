@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
 import { jwt, openAPI } from "better-auth/plugins";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
 import { createPrismaClient } from "./prisma";
@@ -19,6 +20,7 @@ export const auth = betterAuth({
 
   plugins: [
     openAPI(),
+    nextCookies(),
     ...(jwtEnabled
       ? [
           jwt({
