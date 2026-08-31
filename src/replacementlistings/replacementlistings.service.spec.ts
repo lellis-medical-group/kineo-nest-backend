@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { PrismaService } from "../prisma.service";
@@ -20,6 +20,8 @@ const listing = {
   createdAt: new Date("2026-08-20T08:00:00.000Z"),
   updatedAt: new Date("2026-08-20T08:00:00.000Z"),
 };
+
+const openListing = { ...listing, status: "OPEN" };
 
 describe("ReplacementlistingsService", () => {
   it("persists maxApplications when creating a listing", async () => {
@@ -69,5 +71,96 @@ describe("ReplacementlistingsService", () => {
         endDate: "2026-09-01T08:00:00.000Z",
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("allows anyone to view an OPEN listing", async () => {
+    const prisma = {
+      replacementListing: {
+        findUnique: async () => ({
+          ...openListing,
+          _count: { applications: 0 },
+        }),
+      },
+    } as unknown as PrismaService;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const service = new ReplacementlistingsService(prisma, config);
+
+    const result = await service.findOne("listing-1");
+    expect(result).toBeDefined();
+    expect(result.id).toBe("listing-1");
+  });
+
+  it("allows anonymous users to view an OPEN listing", async () => {
+    const prisma = {
+      replacementListing: {
+        findUnique: async () => ({
+          ...openListing,
+          _count: { applications: 0 },
+        }),
+      },
+    } as unknown as PrismaService;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const service = new ReplacementlistingsService(prisma, config);
+
+    const result = await service.findOne("listing-1", undefined);
+    expect(result).toBeDefined();
+    expect(result.id).toBe("listing-1");
+  });
+
+  it("blocks unauthenticated access to non-OPEN listings", async () => {
+    const prisma = {
+      replacementListing: {
+        findUnique: async () => ({ ...listing, _count: { applications: 0 } }),
+      },
+    } as unknown as PrismaService;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const service = new ReplacementlistingsService(prisma, config);
+
+    await expect(
+      service.findOne("listing-1", undefined),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("allows owner to view their own non-OPEN listing", async () => {
+    const prisma = {
+      profile: { findUnique: async () => profile },
+      replacementListing: {
+        findUnique: async () => ({ ...listing, _count: { applications: 0 } }),
+      },
+    } as unknown as PrismaService;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const service = new ReplacementlistingsService(prisma, config);
+
+    const result = await service.findOne("listing-1", "user-1");
+    expect(result).toBeDefined();
+    expect(result.id).toBe("listing-1");
+  });
+
+  it("blocks non-owner from viewing non-OPEN listings", async () => {
+    const otherProfile = { id: "profile-2", userId: "user-2" };
+    const prisma = {
+      profile: { findUnique: async () => otherProfile },
+      replacementListing: {
+        findUnique: async () => ({ ...listing, _count: { applications: 0 } }),
+      },
+    } as unknown as PrismaService;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const service = new ReplacementlistingsService(prisma, config);
+
+    await expect(service.findOne("listing-1", "user-2")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it("returns 404 when listing does not exist", async () => {
+    const prisma = {
+      replacementListing: { findUnique: async () => null },
+    } as unknown as PrismaService;
+    const config = { get: () => undefined } as unknown as ConfigService;
+    const service = new ReplacementlistingsService(prisma, config);
+
+    await expect(service.findOne("nonexistent-id")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

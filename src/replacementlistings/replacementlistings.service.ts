@@ -170,11 +170,14 @@ export class ReplacementlistingsService {
     }
 
     if (listing.status !== "OPEN") {
-      const profileId = requesterUserId
-        ? await getOwnedProfileId(this.prisma, requesterUserId).catch(
-            () => undefined,
-          )
-        : undefined;
+      if (!requesterUserId) {
+        throw new NotFoundException(`Replacement listing ${id} not found`);
+      }
+
+      const profileId = await getOwnedProfileId(
+        this.prisma,
+        requesterUserId,
+      ).catch(() => undefined);
 
       if (listing.createdById !== profileId) {
         throw new NotFoundException(`Replacement listing ${id} not found`);
