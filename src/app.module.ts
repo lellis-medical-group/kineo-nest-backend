@@ -9,12 +9,12 @@ import { ApplicationsModule } from "./applications/applications.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception/http-exception.filter";
 import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-proxy.guard";
 import configuration from "./config/configuration";
+import { HealthModule } from "./health/health.module";
 import { auth } from "./lib/auth";
 import { PracticesModule } from "./practices/practices.module";
 import { PrismaModule } from "./prisma.module";
 import { ProfileModule } from "./profile/profile.module";
 import { ReplacementlistingsModule } from "./replacementlistings/replacementlistings.module";
-import { UsersModule } from "./users/users.module";
 
 @Module({
   imports: [
@@ -44,11 +44,11 @@ import { UsersModule } from "./users/users.module";
       }),
     }),
     AuthModule.forRoot({ auth }),
-    UsersModule,
     ProfileModule,
     PracticesModule,
     ReplacementlistingsModule,
     ApplicationsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

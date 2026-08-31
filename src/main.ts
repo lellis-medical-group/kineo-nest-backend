@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import compression from "compression";
 import helmet from "helmet";
 import { cleanupOpenApiDoc } from "nestjs-zod";
 
@@ -14,6 +15,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
+
+  app.use(compression());
 
   app.use(
     helmet({
