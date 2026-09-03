@@ -20,54 +20,121 @@ export function resetPasswordEmailTemplate({
     .outlook-fix { width:600px; }
   </style>
   <![endif]-->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; }
+      .email-padding { padding-left: 24px !important; padding-right: 24px !important; }
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f7fa;">
+<body style="margin:0; padding:0; background-color:#11100F;">
   <!--[if (gte mso 9)|(IE)]>
   <table width="600" align="center" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
   <tr><td>
   <![endif]-->
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; width:100%; background-color:#ffffff; border-collapse:collapse;" bgcolor="#ffffff">
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#11100F; border-collapse:collapse;">
+    <tr><td height="40" style="font-size:0; line-height:0;">&nbsp;</td></tr>
     <tr>
-      <td style="padding:40px 30px 20px 30px; background-color:#ffffff;">
-        <h1 style="font-size:24px; font-weight:600; color:#1a2a3a; margin:0; padding:0;">Réinitialisation du mot de passe</h1>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 30px;">
-        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-          <tr><td style="border-top:2px solid #e0e7ef; font-size:0; line-height:0;">&nbsp;</td></tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:30px 30px 20px 30px; color:#2d3748; font-size:16px; line-height:1.6; background-color:#ffffff;">
-        <p style="padding:0 0 15px 0; margin:0;">Bonjour <strong>${displayName}</strong>,</p>
-        <p style="padding:0 0 15px 0; margin:0;">Nous avons reçu une demande de réinitialisation de votre mot de passe pour votre compte.</p>
-        <p style="padding:0 0 25px 0; margin:0;">Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
-
-        <!-- Bouton -->
-        <table align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse; padding:0 0 25px 0;">
+      <td align="center">
+        <table role="presentation" class="email-container" align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px; width:100%; background-color:#201F1E; border-radius:16px; border-collapse:collapse; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;" bgcolor="#201F1E">
           <tr>
-            <td align="center" style="background-color:#2563eb; padding:12px 28px;" bgcolor="#2563eb">
-              <a href="${url}" style="color:#ffffff; font-weight:600; font-size:16px; text-decoration:none; display:inline-block;">Réinitialiser mon mot de passe</a>
+            <td class="email-padding" style="padding:44px 36px 0 36px; background-color:#201F1E;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td style="width:22px; height:22px; background-color:#D7D1B0; border-radius:6px;" bgcolor="#D7D1B0">&nbsp;</td>
+                  <td style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td style="font-size:18px; font-weight:700; color:#FFFFFF; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">Kinéo</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr><td style="line-height:32px; font-size:0;" height="32">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px;">
+              <h1 style="font-size:24px; font-weight:600; color:#FFFFFF; margin:0; padding:0; line-height:1.4; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">Réinitialisation du mot de passe</h1>
+            </td>
+          </tr>
+          <tr><td style="line-height:28px; font-size:0;" height="28">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr><td style="border-top:1px solid #33312D; font-size:0; line-height:0;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr><td style="line-height:32px; font-size:0;" height="32">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px; color:#D9D6D0; font-size:16px; line-height:1.7; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">
+              <p style="padding:0; margin:0;">Bonjour <strong style="color:#FFFFFF;">${displayName}</strong>,</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:18px; font-size:0;" height="18">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px; color:#D9D6D0; font-size:16px; line-height:1.7; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">
+              <p style="padding:0; margin:0;">Nous avons reçu une demande de réinitialisation de votre mot de passe pour votre compte.</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:18px; font-size:0;" height="18">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px; color:#D9D6D0; font-size:16px; line-height:1.7; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">
+              <p style="padding:0; margin:0;">Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe :</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:34px; font-size:0;" height="34">&nbsp;</td></tr>
+          <tr>
+            <td align="center" style="padding:0 36px;">
+              <table align="center" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td align="center" style="background-color:#D7D1B0; padding:15px 34px; border-radius:999px;" bgcolor="#D7D1B0">
+                    <a href="${url}" style="color:#11100F; font-weight:600; font-size:16px; text-decoration:none; display:inline-block; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">Réinitialiser mon mot de passe</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr><td style="line-height:34px; font-size:0;" height="34">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px; font-size:14px; line-height:1.6; color:#8A8680; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">
+              <p style="padding:0; margin:0;">Ce lien est valable 1 heure.</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:10px; font-size:0;" height="10">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px; font-size:14px; line-height:1.6; color:#8A8680; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">
+              <p style="padding:0; margin:0;"><strong style="color:#B9B5AE;">Si vous n’êtes pas à l’origine de cette demande</strong>, ignorez simplement cet email.</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:10px; font-size:0;" height="10">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px; font-size:14px; line-height:1.6; color:#8A8680; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">
+              <p style="padding:0; margin:0;">Pour toute question, contactez notre support.</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:40px; font-size:0;" height="40">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr><td style="border-top:1px solid #33312D; font-size:0; line-height:0;">&nbsp;</td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr><td style="line-height:22px; font-size:0;" height="22">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px;">
+              <p style="padding:0; margin:0; font-size:13px; color:#8A8680; text-align:center; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">© ${new Date().getFullYear()} Kinéo. Tous droits réservés.</p>
+            </td>
+          </tr>
+          <tr><td style="line-height:8px; font-size:0;" height="8">&nbsp;</td></tr>
+          <tr>
+            <td class="email-padding" style="padding:0 36px 40px 36px;">
+              <p style="padding:0; margin:0; font-size:13px; color:#8A8680; text-align:center; font-family:'Space Grotesk', Arial, Helvetica, sans-serif;">Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
             </td>
           </tr>
         </table>
-
-        <p style="padding:0 0 15px 0; margin:0; font-size:14px; color:#64748b;">Ce lien est valable 1 heure.</p>
-        <p style="padding:0 0 5px 0; margin:0; font-size:14px; color:#64748b;"><strong>Si vous n’êtes pas à l’origine de cette demande</strong>, ignorez simplement cet email.</p>
-        <p style="padding:0; margin:0; font-size:14px; color:#64748b;">Pour toute question, contactez notre support.</p>
       </td>
     </tr>
-    <tr>
-      <td style="padding:20px 30px 30px 30px; background-color:#ffffff;">
-        <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-          <tr><td style="border-top:1px solid #e0e7ef; font-size:0; line-height:0;">&nbsp;</td></tr>
-        </table>
-        <p style="padding:15px 0 0 0; margin:0; font-size:13px; color:#94a3b8; text-align:center;">© ${new Date().getFullYear()} Kinéo. Tous droits réservés.</p>
-        <p style="padding:5px 0 0 0; margin:0; font-size:13px; color:#94a3b8; text-align:center;">Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-      </td>
-    </tr>
+    <tr><td height="40" style="font-size:0; line-height:0;">&nbsp;</td></tr>
   </table>
   <!--[if (gte mso 9)|(IE)]>
   </td></tr></table>
