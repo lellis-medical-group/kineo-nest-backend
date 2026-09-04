@@ -185,6 +185,20 @@ sequenceDiagram
     API-->>U: Profile created
 ```
 
+> **Email links**: links sent by Better Auth emails (email verification, password
+> reset) are rewritten to the Next.js frontend pages (`/verify-email`,
+> `/reset-password`) using the `FRONTEND_URL` variable. The frontend pages then
+> complete the flow through `authClient`, which proxies `/api/auth/*` to the
+> NestJS API — the API remains the single authentication server and all
+> endpoints are unchanged.
+>
+> The API also exposes a custom Better Auth endpoint, `GET
+> /api/auth/check-email-verification?token=…`: given a verification token (even
+> an expired or already-used one) it reports whether the account is already
+> verified. The `/verify-email` page uses it to show the success screen when a
+> user re-clicks an old email link, and the signup page displays a “check your
+> inbox” confirmation with a resend action after registration.
+
 ### 5.2 Listing Publication and Application
 
 ```mermaid
