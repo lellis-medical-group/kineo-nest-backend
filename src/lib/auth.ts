@@ -2,7 +2,9 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, openAPI } from "better-auth/plugins";
+import { emailVerificationStatusPlugin } from "./auth/email-verification-status";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
+import { buildFrontendAuthUrl } from "./email/links";
 import { createPrismaClient } from "./prisma";
 
 const prisma = createPrismaClient();
@@ -21,6 +23,7 @@ export const auth = betterAuth({
   plugins: [
     openAPI(),
     nextCookies(),
+    emailVerificationStatusPlugin(),
     ...(jwtEnabled
       ? [
           jwt({
@@ -77,7 +80,7 @@ export const auth = betterAuth({
       await sendResetPasswordEmail({
         email: user.email,
         name: user.name,
-        url,
+        url: buildFrontendAuthUrl(url, "/reset-password"),
       });
     },
   },
@@ -87,7 +90,7 @@ export const auth = betterAuth({
       await sendVerificationEmail({
         email: user.email,
         name: user.name,
-        url,
+        url: buildFrontendAuthUrl(url, "/verify-email", { email: user.email }),
       });
     },
 
