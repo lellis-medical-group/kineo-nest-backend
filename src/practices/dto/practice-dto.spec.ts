@@ -69,6 +69,34 @@ describe("Practice DTO security", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("rejects non-finite coordinates", () => {
+      expect(
+        CreatePracticeSchema.safeParse({
+          ...validPractice,
+          latitude: Number.POSITIVE_INFINITY,
+          longitude: 4.85,
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects forbidden control or invisible characters", () => {
+      expect(
+        CreatePracticeSchema.safeParse({
+          ...validPractice,
+          name: "Clinique\u200Bdes Lilas", // zero-width space
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a city containing forbidden characters", () => {
+      expect(
+        CreatePracticeSchema.safeParse({
+          ...validPractice,
+          city: "Lyon 69000",
+        }).success,
+      ).toBe(false);
+    });
   });
 
   describe("UpdatePracticeSchema", () => {
@@ -121,6 +149,25 @@ describe("Practice DTO security", () => {
         expect(result.data.page).toBe(3);
         expect(result.data.limit).toBe(10);
       }
+    });
+
+    it("rejects pagination deeper than 10,000 results", () => {
+      expect(
+        FindPracticesSchema.safeParse({ page: "101", limit: "100" }).success,
+      ).toBe(false);
+      expect(
+        FindPracticesSchema.safeParse({ page: "100", limit: "100" }).success,
+      ).toBe(true);
+    });
+
+    it("rejects non-finite coordinates in the geo search", () => {
+      expect(
+        FindPracticesSchema.safeParse({
+          lat: "1e999",
+          lng: "4.85",
+          radiusKm: "10",
+        }).success,
+      ).toBe(false);
     });
   });
 });

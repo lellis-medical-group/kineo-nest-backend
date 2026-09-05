@@ -27,6 +27,11 @@ export const FindApplicationsSchema = z
       .default(20)
       .describe("Number of results per page, max 100"),
   })
-  .strict();
+  .strict()
+  .refine((data) => data.page * data.limit <= 10_000, {
+    message:
+      "page and limit combination is too large (no more than 10,000 results can be requested)",
+    path: ["page"],
+  });
 
 export class FindApplicationsDto extends createZodDto(FindApplicationsSchema) {}

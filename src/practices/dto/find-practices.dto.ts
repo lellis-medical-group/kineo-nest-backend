@@ -19,18 +19,21 @@ export const FindPracticesSchema = z
       .describe("Filter by city"),
     lat: z.coerce
       .number()
+      .finite()
       .min(-90)
       .max(90)
       .optional()
       .describe("Latitude for geographic radius search"),
     lng: z.coerce
       .number()
+      .finite()
       .min(-180)
       .max(180)
       .optional()
       .describe("Longitude for geographic radius search"),
     radiusKm: z.coerce
       .number()
+      .finite()
       .positive()
       .max(500)
       .optional()
@@ -63,6 +66,11 @@ export const FindPracticesSchema = z
         path: ["lat"],
       });
     }
+  })
+  .refine((data) => data.page * data.limit <= 10_000, {
+    message:
+      "page and limit combination is too large (no more than 10,000 results can be requested)",
+    path: ["page"],
   });
 
 export class FindPracticesDto extends createZodDto(FindPracticesSchema) {}

@@ -56,6 +56,20 @@ describe("Application DTO security", () => {
         }).success,
       ).toBe(false);
     });
+
+    it("allows newlines but rejects invisible control characters in the message", () => {
+      const withNewline = CreateApplicationSchema.safeParse({
+        listingId: LISTING_CUID,
+        message: "Bonjour\nDisponible en septembre.",
+      });
+      expect(withNewline.success).toBe(true);
+
+      const withZeroWidth = CreateApplicationSchema.safeParse({
+        listingId: LISTING_CUID,
+        message: "Bonjour\u200Bcaché",
+      });
+      expect(withZeroWidth.success).toBe(false);
+    });
   });
 
   describe("UpdateApplicationSchema", () => {
@@ -142,6 +156,15 @@ describe("Application DTO security", () => {
       expect(
         FindApplicationsSchema.safeParse({ listingId: "nope" }).success,
       ).toBe(false);
+    });
+
+    it("rejects pagination deeper than 10,000 results", () => {
+      expect(
+        FindApplicationsSchema.safeParse({ page: "200", limit: "100" }).success,
+      ).toBe(false);
+      expect(
+        FindApplicationsSchema.safeParse({ page: "100", limit: "100" }).success,
+      ).toBe(true);
     });
   });
 });

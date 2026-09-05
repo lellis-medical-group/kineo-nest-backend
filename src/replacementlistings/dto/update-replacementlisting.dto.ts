@@ -1,5 +1,6 @@
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
+import { textField } from "../../common/validation/text";
 import { Specialty } from "../../generated/prisma/enums";
 
 export const UpdateReplacementListingSchema = z
@@ -20,11 +21,7 @@ export const UpdateReplacementListingSchema = z
       .boolean()
       .optional()
       .describe("Marks the listing as a last-minute urgent replacement"),
-    description: z
-      .string()
-      .trim()
-      .min(1)
-      .max(2000)
+    description: textField(2000, "Description")
       .optional()
       .describe("Free text details about the replacement"),
     maxApplications: z

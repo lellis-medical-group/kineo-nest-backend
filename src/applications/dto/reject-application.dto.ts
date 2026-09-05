@@ -1,13 +1,10 @@
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
+import { textField } from "../../common/validation/text";
 
 export const RejectApplicationSchema = z
   .object({
-    rejectionReason: z
-      .string()
-      .trim()
-      .min(1)
-      .max(500)
+    rejectionReason: textField(500, "Rejection reason")
       .optional()
       .describe("Optional reason shared with the applicant"),
   })

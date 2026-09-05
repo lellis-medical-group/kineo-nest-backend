@@ -23,7 +23,7 @@ describe("Profile DTO security", () => {
       expect(result.success).toBe(false);
     });
 
-    it("trims string fields and validates the RPPS format", () => {
+    it("trims string fields, normalizes and validates the RPPS format", () => {
       const result = CreateProfileSchema.safeParse({
         specialty: "GENERALIST",
         profileType: "REPLACEMENT",
@@ -42,6 +42,42 @@ describe("Profile DTO security", () => {
         rppsNumber: "123",
       });
       expect(invalidRpps.success).toBe(false);
+    });
+
+    it("accepts separators in the RPPS number but still requires 11 digits", () => {
+      const decorated = CreateProfileSchema.safeParse({
+        specialty: "GENERALIST",
+        profileType: "REPLACEMENT",
+        rppsNumber: "10 000 000 001",
+      });
+      expect(decorated.success).toBe(true);
+      if (decorated.success) {
+        expect(decorated.data.rppsNumber).toBe("10000000001");
+      }
+
+      expect(
+        CreateProfileSchema.safeParse({
+          specialty: "GENERALIST",
+          profileType: "REPLACEMENT",
+          rppsNumber: "100.000.000-01",
+        }).success,
+      ).toBe(true);
+
+      expect(
+        CreateProfileSchema.safeParse({
+          specialty: "GENERALIST",
+          profileType: "REPLACEMENT",
+          rppsNumber: "100000000001",
+        }).success,
+      ).toBe(false);
+
+      expect(
+        CreateProfileSchema.safeParse({
+          specialty: "GENERALIST",
+          profileType: "REPLACEMENT",
+          rppsNumber: "1000000000a",
+        }).success,
+      ).toBe(false);
     });
 
     it("rejects an empty or unsafe city value", () => {
@@ -69,6 +105,17 @@ describe("Profile DTO security", () => {
         longitude: 2.3522,
       });
       expect(both.success).toBe(true);
+    });
+
+    it("rejects non-finite coordinates", () => {
+      expect(
+        CreateProfileSchema.safeParse({
+          specialty: "GENERALIST",
+          profileType: "BOTH",
+          latitude: Number.POSITIVE_INFINITY,
+          longitude: 2.3522,
+        }).success,
+      ).toBe(false);
     });
   });
 
@@ -116,6 +163,15 @@ describe("Profile DTO security", () => {
 
     it("rejects non-integer pagination", () => {
       expect(FindProfilesSchema.safeParse({ page: "1.5" }).success).toBe(false);
+    });
+
+    it("rejects pagination deeper than 10,000 results", () => {
+      expect(
+        FindProfilesSchema.safeParse({ page: "200", limit: "100" }).success,
+      ).toBe(false);
+      expect(
+        FindProfilesSchema.safeParse({ page: "100", limit: "100" }).success,
+      ).toBe(true);
     });
   });
 });

@@ -1,35 +1,30 @@
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
 import { latLongsPaired } from "../../common/validation/lat-long";
+import { CITY_REGEX, textField } from "../../common/validation/text";
 
 export const CreatePracticeObjectSchema = z
   .object({
-    name: z
-      .string()
-      .trim()
-      .min(1)
-      .max(200)
-      .describe("Name of the practice or clinic"),
-    address: z
-      .string()
-      .trim()
-      .min(1)
-      .max(300)
-      .describe("Street address of the practice"),
-    city: z
-      .string()
-      .trim()
-      .min(1)
-      .max(100)
+    name: textField(200, "Name").describe("Name of the practice or clinic"),
+    address: textField(300, "Address").describe(
+      "Street address of the practice",
+    ),
+    city: textField(100, "City")
+      .regex(
+        CITY_REGEX,
+        "City must contain only letters, spaces, hyphens or apostrophes",
+      )
       .describe("City where the practice is located"),
     latitude: z
       .number()
+      .finite()
       .min(-90)
       .max(90)
       .optional()
       .describe("Latitude of the practice location"),
     longitude: z
       .number()
+      .finite()
       .min(-180)
       .max(180)
       .optional()

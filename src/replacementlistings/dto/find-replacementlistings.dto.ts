@@ -2,6 +2,15 @@ import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
 import { Specialty } from "../../generated/prisma/enums";
 
+/**
+ * Query parameters are plain strings: `z.coerce.boolean()` would turn the
+ * literal string "false" into `true`, inverting the filter. Accept only
+ * explicit boolean values or the strings "true"/"false".
+ */
+const BooleanQueryParam = z
+  .union([z.boolean(), z.literal("true"), z.literal("false")])
+  .transform((value) => value === true || value === "true");
+
 export const FindReplacementListingsSchema = z
   .object({
     specialty: z
@@ -15,10 +24,9 @@ export const FindReplacementListingsSchema = z
       .max(100)
       .optional()
       .describe("Filter by practice city"),
-    urgent: z.coerce
-      .boolean()
-      .optional()
-      .describe("Filter urgent listings only"),
+    urgent: BooleanQueryParam.optional().describe(
+      "Filter urgent listings only",
+    ),
     startDateFrom: z.iso
       .datetime()
       .optional()
@@ -55,6 +63,11 @@ export const FindReplacementListingsSchema = z
         path: ["startDateTo"],
       });
     }
+  })
+  .refine((data) => data.page * data.limit <= 10_000, {
+    message:
+      "page and limit combination is too large (no more than 10,000 results can be requested)",
+    path: ["page"],
   });
 
 export class FindReplacementListingsDto extends createZodDto(

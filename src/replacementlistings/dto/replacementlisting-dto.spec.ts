@@ -66,6 +66,20 @@ describe("ReplacementListing DTO security", () => {
       ).toBe(false);
     });
 
+    it("allows newlines but rejects invisible control characters in the description", () => {
+      const withNewline = CreateReplacementListingSchema.safeParse({
+        ...validListing,
+        description: "Remplacement\ndu mois de septembre.",
+      });
+      expect(withNewline.success).toBe(true);
+
+      const withZeroWidth = CreateReplacementListingSchema.safeParse({
+        ...validListing,
+        description: "Remplacement\u200Bdu mois",
+      });
+      expect(withZeroWidth.success).toBe(false);
+    });
+
     it("rejects a fractional maxApplications", () => {
       expect(
         CreateReplacementListingSchema.safeParse({
@@ -119,8 +133,28 @@ describe("ReplacementListing DTO security", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.city).toBe("Lyon");
+        expect(result.data.urgent).toBe(true);
         expect(result.data.page).toBe(2);
       }
+    });
+
+    it("correctly parses urgent=false instead of inverting the filter", () => {
+      const notUrgent = FindReplacementListingsSchema.safeParse({
+        urgent: "false",
+      });
+      expect(notUrgent.success).toBe(true);
+      if (notUrgent.success) {
+        expect(notUrgent.data.urgent).toBe(false);
+      }
+    });
+
+    it("rejects ambiguous boolean values", () => {
+      expect(
+        FindReplacementListingsSchema.safeParse({ urgent: "yes" }).success,
+      ).toBe(false);
+      expect(
+        FindReplacementListingsSchema.safeParse({ urgent: "1" }).success,
+      ).toBe(false);
     });
 
     it("rejects an inverted date range", () => {
@@ -130,6 +164,21 @@ describe("ReplacementListing DTO security", () => {
           startDateTo: "2026-09-01T00:00:00.000Z",
         }).success,
       ).toBe(false);
+    });
+
+    it("rejects pagination deeper than 10,000 results", () => {
+      expect(
+        FindReplacementListingsSchema.safeParse({
+          page: "200",
+          limit: "100",
+        }).success,
+      ).toBe(false);
+      expect(
+        FindReplacementListingsSchema.safeParse({
+          page: "100",
+          limit: "100",
+        }).success,
+      ).toBe(true);
     });
   });
 });

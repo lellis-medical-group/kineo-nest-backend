@@ -1,16 +1,12 @@
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
+import { textField } from "../../common/validation/text";
 
 export const UpdateApplicationSchema = z
   .object({
-    message: z
-      .string()
-      .trim()
-      .min(1)
-      .max(2000)
-      .describe(
-        "Updated message, only editable while the application is pending",
-      ),
+    message: textField(2000, "Message").describe(
+      "Updated message, only editable while the application is pending",
+    ),
   })
   .strict();
 

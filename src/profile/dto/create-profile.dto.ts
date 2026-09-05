@@ -1,6 +1,7 @@
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
 import { latLongsPaired } from "../../common/validation/lat-long";
+import { CITY_REGEX } from "../../common/validation/text";
 import { ProfileType, Specialty } from "../../generated/prisma/enums";
 
 export const CreateProfileObjectSchema = z
@@ -12,28 +13,34 @@ export const CreateProfileObjectSchema = z
     rppsNumber: z
       .string()
       .trim()
-      .regex(/^\d{11}$/)
+      .max(50)
+      .transform((value) => value.replace(/[\s.\-]/g, ""))
+      .pipe(z.string().regex(/^\d{11}$/))
       .optional()
-      .describe("11-digit RPPS number of the healthcare professional"),
+      .describe(
+        "11-digit RPPS number of the healthcare professional (spaces, dots and dashes are accepted)",
+      ),
     city: z
       .string()
       .trim()
       .min(1)
       .max(100)
       .regex(
-        /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/,
+        CITY_REGEX,
         "City must contain only letters, spaces, hyphens or apostrophes",
       )
       .optional()
       .describe("Main city of practice"),
     latitude: z
       .number()
+      .finite()
       .min(-90)
       .max(90)
       .optional()
       .describe("Latitude of the main practice location"),
     longitude: z
       .number()
+      .finite()
       .min(-180)
       .max(180)
       .optional()
