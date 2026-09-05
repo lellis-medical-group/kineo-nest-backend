@@ -1,4 +1,3 @@
-// src/common/http-exception.filter.ts
 import {
   type ArgumentsHost,
   Catch,
@@ -6,8 +5,8 @@ import {
   Logger,
 } from "@nestjs/common";
 import { BaseExceptionFilter, HttpAdapterHost } from "@nestjs/core";
-import { ZodSerializationException } from "nestjs-zod";
-import { ZodError } from "zod";
+import { ZodSerializationException, ZodValidationException } from "nestjs-zod";
+import { ZodError, type ZodIssue } from "zod";
 
 @Catch(HttpException)
 export class HttpExceptionFilter extends BaseExceptionFilter {
@@ -24,6 +23,22 @@ export class HttpExceptionFilter extends BaseExceptionFilter {
       if (zodError instanceof ZodError) {
         this.logger.error(`ZodSerializationException: ${zodError.message}`);
       }
+    }
+
+    if (exception instanceof ZodValidationException) {
+      const ctx = host.switchToHttp();
+      const response = ctx.getResponse();
+      const zodError = exception.getZodError() as { issues: ZodIssue[] };
+      const errors = zodError.issues.map((issue) => ({
+        path: issue.path,
+        message: issue.message,
+      }));
+
+      return response.status(400).json({
+        statusCode: 400,
+        message: "Validation failed",
+        errors,
+      });
     }
 
     if (this.isProduction) {
