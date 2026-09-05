@@ -22,6 +22,8 @@ export const UpdateReplacementListingSchema = z
       .describe("Marks the listing as a last-minute urgent replacement"),
     description: z
       .string()
+      .trim()
+      .min(1)
       .max(2000)
       .optional()
       .describe("Free text details about the replacement"),
@@ -33,6 +35,7 @@ export const UpdateReplacementListingSchema = z
       .optional()
       .describe("Optional cap on the number of active applications"),
   })
+  .strict()
   .superRefine((data, ctx) => {
     if (
       data.startDate &&

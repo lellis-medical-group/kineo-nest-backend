@@ -5,8 +5,8 @@ import { Specialty } from "../../generated/prisma/enums";
 export const CreateReplacementListingSchema = z
   .object({
     practiceId: z
-      .string()
-      .describe("Id of the practice this listing belongs to"),
+      .cuid()
+      .describe("Id of the practice this listing belongs to (Prisma cuid)"),
     startDate: z.iso
       .datetime()
       .describe("Start date of the replacement period (ISO 8601)"),
@@ -22,6 +22,8 @@ export const CreateReplacementListingSchema = z
       .describe("Marks the listing as a last-minute urgent replacement"),
     description: z
       .string()
+      .trim()
+      .min(1)
       .max(2000)
       .optional()
       .describe("Free text details about the replacement"),
@@ -33,6 +35,7 @@ export const CreateReplacementListingSchema = z
       .optional()
       .describe("Optional cap on the number of active applications"),
   })
+  .strict()
   .refine((data) => new Date(data.startDate) < new Date(data.endDate), {
     message: "startDate must be before endDate",
     path: ["endDate"],
