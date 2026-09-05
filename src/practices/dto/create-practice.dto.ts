@@ -17,14 +17,12 @@ export const CreatePracticeObjectSchema = z
       .describe("City where the practice is located"),
     latitude: z
       .number()
-      .finite()
       .min(-90)
       .max(90)
       .optional()
       .describe("Latitude of the practice location"),
     longitude: z
       .number()
-      .finite()
       .min(-180)
       .max(180)
       .optional()

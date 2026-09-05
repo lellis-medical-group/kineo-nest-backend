@@ -33,14 +33,12 @@ export const CreateProfileObjectSchema = z
       .describe("Main city of practice"),
     latitude: z
       .number()
-      .finite()
       .min(-90)
       .max(90)
       .optional()
       .describe("Latitude of the main practice location"),
     longitude: z
       .number()
-      .finite()
       .min(-180)
       .max(180)
       .optional()

@@ -19,21 +19,18 @@ export const FindPracticesSchema = z
       .describe("Filter by city"),
     lat: z.coerce
       .number()
-      .finite()
       .min(-90)
       .max(90)
       .optional()
       .describe("Latitude for geographic radius search"),
     lng: z.coerce
       .number()
-      .finite()
       .min(-180)
       .max(180)
       .optional()
       .describe("Longitude for geographic radius search"),
     radiusKm: z.coerce
       .number()
-      .finite()
       .positive()
       .max(500)
       .optional()
