@@ -2,3 +2,4 @@ src/generated
 node_modules/
 .env
 dist/
+api-better-auth.json

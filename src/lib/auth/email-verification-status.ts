@@ -4,16 +4,14 @@ import { z } from "zod";
 import { decodeVerificationToken } from "./verification-token";
 
 /**
- * Plugin Better Auth exposant `GET /api/auth/check-email-verification`.
+ * Better Auth plugin exposing `GET /api/auth/check-email-verification`.
  *
- * Reçoit un token de vérification d'email (même expiré ou déjà utilisé) et
- * indique si le compte correspondant est déjà vérifié. La page frontend
- * `/verify-email` l'appelle quand la vérification échoue : si l'adresse est
- * déjà validée, elle affiche l'écran de succès au lieu d'une erreur.
- *
- * Sécurité : la signature du token est vérifiée avec `BETTER_AUTH_SECRET`
- * (seule l'expiration est ignorée) — l'état de vérification n'est donc
- * révélé qu'à qui détient un token émis par ce serveur.
+ * Reports whether the account behind an email verification token (even an
+ * expired or already-used one) is already verified, so the frontend
+ * `/verify-email` page can show success instead of an error in that case.
+ * Security: the signature is verified with `BETTER_AUTH_SECRET` (only
+ * expiration is ignored), so the status is only revealed to holders of a
+ * token this server issued.
  */
 export function emailVerificationStatusPlugin(): BetterAuthPlugin {
   return {

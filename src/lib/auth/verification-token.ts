@@ -5,17 +5,13 @@ export interface VerificationTokenPayload {
 }
 
 /**
- * Décode un token de vérification Better Auth (JWT HS256 signé avec
- * `BETTER_AUTH_SECRET`) en ignorant volontairement son expiration :
- * `compactVerify` vérifie la **signature JWS** sans valider les claims JWT
- * (exp, iat, nbf). La clé `BETTER_AUTH_SECRET` ne permet que HMAC, donc seul
- * ce serveur a pu produire une signature valide.
+ * Decodes a Better Auth verification token (HS256 JWT signed with
+ * `BETTER_AUTH_SECRET`), intentionally ignoring expiration: `compactVerify`
+ * only checks the JWS signature, and only this server can have produced it.
+ * Used to know which account a verification link points to, even when the
+ * token is expired or already consumed.
  *
- * Sert à déterminer vers quel compte pointe un lien de vérification — même
- * expiré ou déjà consommé — afin que la page frontend puisse afficher l'écran
- * de succès quand l'adresse est déjà vérifiée.
- *
- * Retourne `null` si la signature, le format ou le payload est invalide.
+ * Returns `null` on invalid signature, format or payload.
  */
 export async function decodeVerificationToken(
   token: string,

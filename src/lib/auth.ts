@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, openAPI } from "better-auth/plugins";
 import { emailVerificationStatusPlugin } from "./auth/email-verification-status";
+import { inputValidationHook } from "./auth/input-validation";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
 import { buildFrontendAuthUrl } from "./email/links";
 import { createPrismaClient } from "./prisma";
@@ -74,6 +75,7 @@ export const auth = betterAuth({
 
     requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
     minPasswordLength: 8,
+    maxPasswordLength: 128,
     autoSignIn: true,
 
     sendResetPassword: async ({ user, url }) => {
@@ -95,5 +97,9 @@ export const auth = betterAuth({
     },
 
     autoSignInAfterVerification: true,
+  },
+
+  hooks: {
+    before: inputValidationHook,
   },
 });

@@ -104,7 +104,7 @@ async function main() {
         accounts: {
           create: {
             id: crypto.randomUUID(),
-            accountId: userId, // CRUCIAL : accountId doit être égal à userId pour le provider credential
+            accountId: userId, // CRUCIAL: accountId must equal userId for the credential provider
             providerId: "credential",
             password: defaultHashedPassword,
           },
