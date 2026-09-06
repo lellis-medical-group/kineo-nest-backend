@@ -1,12 +1,13 @@
 import { createZodDto } from "nestjs-zod";
 import { z } from "zod";
+import { textField } from "../../common/validation/text";
 import { Specialty } from "../../generated/prisma/enums";
 
 export const CreateReplacementListingSchema = z
   .object({
     practiceId: z
-      .string()
-      .describe("Id of the practice this listing belongs to"),
+      .cuid()
+      .describe("Id of the practice this listing belongs to (Prisma cuid)"),
     startDate: z.iso
       .datetime()
       .describe("Start date of the replacement period (ISO 8601)"),
@@ -20,9 +21,7 @@ export const CreateReplacementListingSchema = z
       .boolean()
       .optional()
       .describe("Marks the listing as a last-minute urgent replacement"),
-    description: z
-      .string()
-      .max(2000)
+    description: textField(2000, "Description")
       .optional()
       .describe("Free text details about the replacement"),
     maxApplications: z
@@ -33,6 +32,7 @@ export const CreateReplacementListingSchema = z
       .optional()
       .describe("Optional cap on the number of active applications"),
   })
+  .strict()
   .refine((data) => new Date(data.startDate) < new Date(data.endDate), {
     message: "startDate must be before endDate",
     path: ["endDate"],
