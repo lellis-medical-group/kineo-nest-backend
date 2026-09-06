@@ -2,7 +2,8 @@ import { z } from "zod";
 
 /**
  * Zod schemas for user-controlled better-auth fields, enforced by the
- * `before` hook in `src/lib/auth.ts` (see `PATH_FIELD_VALIDATORS`).
+ * `before` hook in `src/lib/auth/input-validation.ts`
+ * (see `PATH_FIELD_VALIDATORS`).
  *
  * Better-auth remains the source of truth for email format, password policy
  * on set flows and callbackURL origin trust; these schemas only normalize
