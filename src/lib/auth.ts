@@ -22,13 +22,12 @@ if (!process.env.BETTER_AUTH_SECRET) {
 
 const jwtEnabled = process.env.JWT_ENABLED === "true";
 
-/** Endpoints better-auth acceptant une entrée utilisateur soumise aux schémas de `./auth/schemas`. */
+/** better-auth endpoints accepting user input, validated with `./auth/schemas`. */
 const USER_INPUT_PATHS = new Set(["/sign-up/email", "/update-user"]);
 
 /**
- * Valide un champ du body avec le schéma donné et renvoie la valeur parsée
- * (normalisation `trim` incluse) ; lève une `APIError` 400 avec un message
- * clair si la valeur est invalide.
+ * Validates a body field with the given schema and returns the parsed value
+ * (including `trim` normalization); throws a 400 `APIError` on failure.
  */
 function parseBodyField<S extends z.ZodType>(
   schema: S,

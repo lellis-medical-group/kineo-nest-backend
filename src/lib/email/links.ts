@@ -1,19 +1,15 @@
 /**
- * Le `baseURL` de Better Auth est l'origine de l'API NestJS : les liens
- * d'email générés nativement (vérification, réinitialisation) pointeraient
- * donc vers l'API et non vers le frontend Next.js.
+ * Better Auth's `baseURL` points to the NestJS API, but email links must open
+ * frontend pages. This rewrites Better Auth email URLs to frontend pages while
+ * preserving token and callbackURL; the target page completes the flow through
+ * `authClient`, which proxies to the API (NestJS stays the sole auth server).
  *
- * Cette fonction réécrit l'URL produite par Better Auth vers une page du
- * frontend en conservant le token et le callbackURL d'origine. La page cible
- * complète ensuite le flux via `authClient`, qui proxifie vers l'API :
- * NestJS reste le seul serveur d'authentification.
+ * Handled formats (better-auth 1.6.x):
+ * - `${baseURL}/verify-email?token=...&callbackURL=...` (token in query)
+ * - `${baseURL}/reset-password/<token>?callbackURL=...` (token in path)
  *
- * Formats gérés (better-auth 1.6.x) :
- * - `${baseURL}/verify-email?token=...&callbackURL=...` (token en query)
- * - `${baseURL}/reset-password/<token>?callbackURL=...` (token dans le path)
- *
- * `extraParams` permet d'ajouter des paramètres utiles à la page frontend
- * (ex. l'email du compte pour proposer un renvoi d'email de vérification).
+ * `extraParams` appends params useful to the frontend page
+ * (e.g. the account email, to offer a "resend verification" action).
  */
 export function buildFrontendAuthUrl(
   serverUrl: string,
