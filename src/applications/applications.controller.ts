@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Throttle } from "@nestjs/throttler";
+import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { Session } from "@thallesp/nestjs-better-auth";
 import { ZodSerializerDto } from "nestjs-zod";
@@ -32,7 +32,7 @@ export class ApplicationsController {
 
   @Post()
   @UseGuards(EmailVerifiedGuard)
-  @Throttle({ medium: { limit: 5, ttl: 10000 } })
+  @ThrottleWithConfig("medium")
   @ApiOperation({ summary: "Apply to a replacement listing" })
   @ApiResponse({ status: 201, description: "Application submitted" })
   @ApiResponse({ status: 409, description: "Already applied to this listing" })
