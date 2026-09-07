@@ -17,7 +17,7 @@
     "db:seed": "bunx --bun prisma db seed"
   },
   "dependencies": {
-    "@better-auth/prisma-adapter": "^1.6.26",
+    "@better-auth/prisma-adapter": "1.7.3",
     "@nestjs/common": "^12.0.0",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^12.0.0",
