@@ -9,10 +9,10 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { Session } from "@thallesp/nestjs-better-auth";
 import { ZodSerializerDto } from "nestjs-zod";
+import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import { EmailVerifiedGuard } from "../common/guards/email-verified.guard";
 import { ApplicationsService } from "./applications.service";
 import { CreateApplicationDto } from "./dto/create-application.dto";
