@@ -88,6 +88,7 @@ export class ReplacementlistingsService {
           data: {
             practiceId: dto.practiceId,
             createdById: profileId,
+            title: dto.title,
             startDate: new Date(dto.startDate),
             endDate: new Date(dto.endDate),
             specialty: dto.specialty,

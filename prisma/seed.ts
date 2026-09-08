@@ -174,16 +174,20 @@ async function main() {
     for (let j = 0; j < 2; j++) {
       const startDays = 10 + i * 5 + j * 20;
       const durationDays = 3 + Math.floor(Math.random() * 10);
+      const isUrgent = j === 0 && i % 2 === 0;
 
       const listing = await prisma.replacementListing.create({
         data: {
           practiceId: practice.id,
           createdById: ownerProfile.id,
+          title: isUrgent
+            ? `Remplacement urgent - ${practice.name}`
+            : `Remplacement ${durationDays > 7 ? "de longue durée" : "de courte durée"} - ${practice.name}`,
           startDate: getFutureDate(startDays),
           endDate: getFutureDate(startDays + durationDays),
           specialty: ownerProfile.specialty,
           status: getRandomItem(listingStatuses),
-          urgent: j === 0 && i % 2 === 0,
+          urgent: isUrgent,
           description: `Looking for a replacement for practice ${practice.name}. Position ${j === 0 ? "urgent" : "planned"}.`,
           maxApplications: 5 + j,
         },

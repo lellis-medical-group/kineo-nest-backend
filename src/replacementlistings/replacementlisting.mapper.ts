@@ -1,4 +1,5 @@
 export function toReplacementListingDto(listing: {
+  title: string;
   startDate: Date;
   endDate: Date;
   createdAt: Date;
