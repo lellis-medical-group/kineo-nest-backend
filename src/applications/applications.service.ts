@@ -70,9 +70,8 @@ export class ApplicationsService {
   }
 
   /**
-   * Totals per application status over the whole collection matching
-   * `where` (never scoped by the applied status filter), so the frontend
-   * tab counters are stable regardless of the page or filter in use.
+   * Totals per status over the whole collection, so tab counters stay stable
+   * across pages and filters.
    */
   private async countApplicationsByStatus(
     where: Prisma.ApplicationWhereInput,
@@ -229,8 +228,6 @@ export class ApplicationsService {
         include: { applicant: { include: { user: true } } },
       }),
       this.prisma.application.count({ where }),
-      // Tab totals always cover every application received on the listing,
-      // whatever the applied status filter
       this.countApplicationsByStatus({ listingId }),
     ]);
 
@@ -268,8 +265,6 @@ export class ApplicationsService {
         include: { listing: { include: { practice: true } } },
       }),
       this.prisma.application.count({ where }),
-      // Tab totals always cover the whole collection, whatever the applied
-      // status filter or page
       this.countApplicationsByStatus({
         applicantId: profile.id,
         listingId: filters.listingId,

@@ -8,9 +8,8 @@ import {
 } from "../../generated/prisma/enums";
 
 /**
- * Listing snapshot embedded in application responses so the frontend can
- * render cards and details without extra fetches (no N+1, no dependency
- * on /replacement-listings/{id} visibility rules).
+ * Embedded listing snapshot so cards/details need no extra fetches or
+ * visibility-rule lookups.
  */
 export const ApplicationListingSchema = z.object({
   id: z.string(),
@@ -65,9 +64,8 @@ export const ApplicationSchema = z.object({
 export class Application extends createZodDto(ApplicationSchema) {}
 
 /**
- * Server-computed totals for the whole collection (the applicant's own
- * applications or the ones received on a listing), independent of any
- * status filter applied to the list. `total` backs the "all" tab.
+ * Server-computed totals for the whole collection, independent of any
+ * applied filter; `total` backs the "all" tab.
  */
 export const ApplicationStatusCountsSchema = z.object({
   total: z.number().describe("Count across all statuses ('all' tab)"),
