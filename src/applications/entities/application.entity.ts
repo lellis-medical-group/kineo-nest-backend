@@ -20,6 +20,7 @@ export const ApplicationListingSchema = z.object({
   specialty: z.enum(Specialty),
   status: z.enum(ListingStatus),
   urgent: z.boolean(),
+  description: z.string().nullable(),
   practice: z.object({
     id: z.string(),
     name: z.string(),

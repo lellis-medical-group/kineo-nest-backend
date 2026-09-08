@@ -12,6 +12,7 @@ type EmbeddedListing = {
   specialty: Specialty;
   status: ListingStatus;
   urgent: boolean;
+  description: string | null;
   practice: {
     id: string;
     name: string;
@@ -40,6 +41,7 @@ function toEmbeddedListingDto(listing: EmbeddedListing) {
     specialty: listing.specialty,
     status: listing.status,
     urgent: listing.urgent,
+    description: listing.description,
     practice: { ...listing.practice },
   };
 }

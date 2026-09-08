@@ -42,6 +42,7 @@ describe("Application DTO security", () => {
           specialty: "DENTIST",
           status: "OPEN",
           urgent: false,
+          description: "Cabinet moderne, patientèle fidèle.",
           practice: {
             id: "clh8zq6w70000wqf4vlonix5d",
             name: "Cabinet des Lilas",
