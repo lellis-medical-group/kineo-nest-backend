@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { ApplicationSchema } from "../entities/application.entity";
+import {
+  ApplicationSchema,
+  PaginatedApplicationsSchema,
+} from "../entities/application.entity";
 import { CreateApplicationSchema } from "./create-application.dto";
 import { FindApplicationsSchema } from "./find-applications.dto";
 import { RejectApplicationSchema } from "./reject-application.dto";
@@ -58,6 +61,49 @@ describe("Application DTO security", () => {
         },
       });
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe("PaginatedApplicationsSchema", () => {
+    it("accepts a paginated response with server-computed status counts", () => {
+      const result = PaginatedApplicationsSchema.safeParse({
+        data: [validApplication],
+        meta: {
+          total: 3,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+          counts: {
+            total: 3,
+            PENDING: 2,
+            SHORTLISTED: 0,
+            ACCEPTED: 0,
+            REJECTED: 1,
+            WITHDRAWN: 0,
+          },
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects counts missing a status", () => {
+      const result = PaginatedApplicationsSchema.safeParse({
+        data: [validApplication],
+        meta: {
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+          counts: {
+            total: 1,
+            PENDING: 1,
+            SHORTLISTED: 0,
+            ACCEPTED: 0,
+            REJECTED: 0,
+          },
+        },
+      });
+      expect(result.success).toBe(false);
     });
   });
 

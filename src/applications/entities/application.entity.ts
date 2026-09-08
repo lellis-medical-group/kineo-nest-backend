@@ -63,6 +63,20 @@ export const ApplicationSchema = z.object({
 
 export class Application extends createZodDto(ApplicationSchema) {}
 
+/**
+ * Server-computed totals for the whole collection (the applicant's own
+ * applications or the ones received on a listing), independent of any
+ * status filter applied to the list. `total` backs the "all" tab.
+ */
+export const ApplicationStatusCountsSchema = z.object({
+  total: z.number().describe("Count across all statuses ('all' tab)"),
+  PENDING: z.number(),
+  SHORTLISTED: z.number(),
+  ACCEPTED: z.number(),
+  REJECTED: z.number(),
+  WITHDRAWN: z.number(),
+});
+
 export const PaginatedApplicationsSchema = z.object({
   data: z.array(ApplicationSchema),
   meta: z.object({
@@ -70,6 +84,7 @@ export const PaginatedApplicationsSchema = z.object({
     page: z.number(),
     limit: z.number(),
     totalPages: z.number(),
+    counts: ApplicationStatusCountsSchema,
   }),
 });
 

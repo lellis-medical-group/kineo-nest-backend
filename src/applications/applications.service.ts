@@ -69,6 +69,37 @@ export class ApplicationsService {
     }
   }
 
+  /**
+   * Totals per application status over the whole collection matching
+   * `where` (never scoped by the applied status filter), so the frontend
+   * tab counters are stable regardless of the page or filter in use.
+   */
+  private async countApplicationsByStatus(
+    where: Prisma.ApplicationWhereInput,
+  ): Promise<{ total: number } & Record<ApplicationStatus, number>> {
+    const grouped = await this.prisma.application.groupBy({
+      by: ["status"],
+      where,
+      _count: true,
+    });
+
+    const counts = {
+      total: 0,
+      PENDING: 0,
+      SHORTLISTED: 0,
+      ACCEPTED: 0,
+      REJECTED: 0,
+      WITHDRAWN: 0,
+    } as { total: number } & Record<ApplicationStatus, number>;
+
+    for (const row of grouped) {
+      counts[row.status] = row._count;
+      counts.total += row._count;
+    }
+
+    return counts;
+  }
+
   async create(userId: string, dto: CreateApplicationDto) {
     const profile = await getOwnedProfile(this.prisma, userId);
 
@@ -189,7 +220,7 @@ export class ApplicationsService {
 
     const where = { listingId, status: filters.status };
 
-    const [data, total] = await Promise.all([
+    const [data, total, counts] = await Promise.all([
       this.prisma.application.findMany({
         where,
         skip,
@@ -198,11 +229,20 @@ export class ApplicationsService {
         include: { applicant: { include: { user: true } } },
       }),
       this.prisma.application.count({ where }),
+      // Tab totals always cover every application received on the listing,
+      // whatever the applied status filter
+      this.countApplicationsByStatus({ listingId }),
     ]);
 
     return {
       data: data.map(toApplicationDto),
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        counts,
+      },
     };
   }
 
@@ -219,7 +259,7 @@ export class ApplicationsService {
       listingId: filters.listingId,
     };
 
-    const [data, total] = await Promise.all([
+    const [data, total, counts] = await Promise.all([
       this.prisma.application.findMany({
         where,
         skip,
@@ -228,11 +268,23 @@ export class ApplicationsService {
         include: { listing: { include: { practice: true } } },
       }),
       this.prisma.application.count({ where }),
+      // Tab totals always cover the whole collection, whatever the applied
+      // status filter or page
+      this.countApplicationsByStatus({
+        applicantId: profile.id,
+        listingId: filters.listingId,
+      }),
     ]);
 
     return {
       data: data.map(toApplicationDto),
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        counts,
+      },
     };
   }
 
