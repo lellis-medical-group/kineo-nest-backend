@@ -69,9 +69,12 @@ export class ReplacementlistingsController {
   @ApiOperation({
     summary: "List all listings created by the current user, any status",
   })
-  @ZodSerializerDto([ReplacementListing])
-  findMine(@Session() session: UserSession) {
-    return this.replacementlistingsService.findMine(session.user.id);
+  @ZodSerializerDto(PaginatedReplacementListings)
+  findMine(
+    @Session() session: UserSession,
+    @Query() query: FindReplacementListingsDto,
+  ) {
+    return this.replacementlistingsService.findMine(session.user.id, query);
   }
 
   @Get(":id")

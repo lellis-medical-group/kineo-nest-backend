@@ -194,6 +194,7 @@ export class ApplicationsService {
         where,
         skip,
         take: limit,
+        orderBy: { createdAt: "desc" },
         include: { applicant: { include: { user: true } } },
       }),
       this.prisma.application.count({ where }),
@@ -205,15 +206,34 @@ export class ApplicationsService {
     };
   }
 
-  async findMine(userId: string) {
+  async findMine(userId: string, filters: FindApplicationsDto) {
     const profile = await getOwnedProfile(this.prisma, userId);
 
-    const applications = await this.prisma.application.findMany({
-      where: { applicantId: profile.id },
-      include: { listing: { include: { practice: true } } },
-    });
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const skip = (page - 1) * limit;
 
-    return applications.map(toApplicationDto);
+    const where = {
+      applicantId: profile.id,
+      status: filters.status,
+      listingId: filters.listingId,
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.application.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: { listing: { include: { practice: true } } },
+      }),
+      this.prisma.application.count({ where }),
+    ]);
+
+    return {
+      data: data.map(toApplicationDto),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   private async assertAccess(id: string, userId: string) {

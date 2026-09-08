@@ -49,9 +49,12 @@ export class ApplicationsController {
 
   @Get("mine")
   @ApiOperation({ summary: "List the current user's own applications" })
-  @ZodSerializerDto([Application])
-  findMine(@Session() session: UserSession) {
-    return this.applicationsService.findMine(session.user.id);
+  @ZodSerializerDto(PaginatedApplications)
+  findMine(
+    @Session() session: UserSession,
+    @Query() query: FindApplicationsDto,
+  ) {
+    return this.applicationsService.findMine(session.user.id, query);
   }
 
   @Get("listing/:listingId")
