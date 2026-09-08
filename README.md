@@ -137,6 +137,7 @@ erDiagram
         string id PK
         string practiceId FK
         string createdById FK
+        string title
         datetime startDate
         datetime endDate
         enum specialty

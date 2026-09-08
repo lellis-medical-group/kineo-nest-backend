@@ -158,6 +158,7 @@ model ReplacementListing {
   practice        Practice      @relation(fields: [practiceId], references: [id], onDelete: Cascade)
   createdById     String
   createdBy       Profile       @relation("CreatedListings", fields: [createdById], references: [id], onDelete: Cascade)
+  title           String
   startDate       DateTime
   endDate         DateTime
   specialty       Specialty
