@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Throttle } from "@nestjs/throttler";
+import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import {
   AllowAnonymous,
@@ -32,7 +32,7 @@ export class PracticesController {
 
   @Post()
   @UseGuards(EmailVerifiedGuard)
-  @Throttle({ medium: { limit: 5, ttl: 10000 } })
+  @ThrottleWithConfig("medium")
   @ApiOperation({
     summary: "Create a practice owned by the current user's profile",
   })
