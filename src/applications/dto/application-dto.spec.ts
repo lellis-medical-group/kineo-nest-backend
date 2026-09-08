@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { ApplicationSchema } from "../entities/application.entity";
 import { CreateApplicationSchema } from "./create-application.dto";
 import { FindApplicationsSchema } from "./find-applications.dto";
 import { RejectApplicationSchema } from "./reject-application.dto";
@@ -7,7 +8,59 @@ import { WithdrawApplicationSchema } from "./withdraw-application.dto";
 
 const LISTING_CUID = "clh8zq6w70000wqf4vlonix5a";
 
+const validApplication = {
+  id: "clh8zq6w70000wqf4vlonix5b",
+  listingId: "clh8zq6w70000wqf4vlonix5a",
+  applicantId: "clh8zq6w70000wqf4vlonix5c",
+  status: "PENDING",
+  message: null,
+  rejectionReason: null,
+  withdrawnReason: null,
+  viewedAt: null,
+  respondedAt: null,
+  createdAt: "2026-09-01T08:00:00.000Z",
+  updatedAt: "2026-09-01T08:00:00.000Z",
+};
+
 describe("Application DTO security", () => {
+  describe("ApplicationSchema", () => {
+    it("accepts a bare application without embedded relations", () => {
+      expect(ApplicationSchema.safeParse(validApplication).success).toBe(true);
+    });
+
+    it("accepts an application with the embedded listing and applicant", () => {
+      const result = ApplicationSchema.safeParse({
+        ...validApplication,
+        listing: {
+          id: LISTING_CUID,
+          title: "Remplacement de novembre",
+          startDate: "2026-11-01T08:00:00.000Z",
+          endDate: "2026-11-15T08:00:00.000Z",
+          specialty: "DENTIST",
+          status: "OPEN",
+          urgent: false,
+          practice: {
+            id: "clh8zq6w70000wqf4vlonix5d",
+            name: "Cabinet des Lilas",
+            address: "12 rue de la Paix",
+            city: "Lyon",
+            latitude: 45.75,
+            longitude: 4.85,
+          },
+        },
+        applicant: {
+          id: "clh8zq6w70000wqf4vlonix5c",
+          specialty: "DENTIST",
+          profileType: "REPLACEMENT",
+          city: "Paris",
+          verified: true,
+          user: { name: "Alice Martin", image: null },
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
   describe("CreateApplicationSchema", () => {
     it("accepts a valid application", () => {
       expect(

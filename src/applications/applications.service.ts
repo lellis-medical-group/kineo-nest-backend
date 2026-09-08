@@ -190,7 +190,12 @@ export class ApplicationsService {
     const where = { listingId, status: filters.status };
 
     const [data, total] = await Promise.all([
-      this.prisma.application.findMany({ where, skip, take: limit }),
+      this.prisma.application.findMany({
+        where,
+        skip,
+        take: limit,
+        include: { applicant: { include: { user: true } } },
+      }),
       this.prisma.application.count({ where }),
     ]);
 
@@ -205,6 +210,7 @@ export class ApplicationsService {
 
     const applications = await this.prisma.application.findMany({
       where: { applicantId: profile.id },
+      include: { listing: { include: { practice: true } } },
     });
 
     return applications.map(toApplicationDto);
@@ -213,6 +219,10 @@ export class ApplicationsService {
   private async assertAccess(id: string, userId: string) {
     const application = await this.prisma.application.findUnique({
       where: { id },
+      include: {
+        listing: { include: { practice: true } },
+        applicant: { include: { user: true } },
+      },
     });
 
     if (!application) {
@@ -220,18 +230,21 @@ export class ApplicationsService {
     }
 
     const profile = await getOwnedProfile(this.prisma, userId);
-    const listing = await this.prisma.replacementListing.findUniqueOrThrow({
-      where: { id: application.listingId },
-    });
 
     const isApplicant = application.applicantId === profile.id;
-    const isOwner = listing.createdById === profile.id;
+    const isOwner = application.listing.createdById === profile.id;
 
     if (!isApplicant && !isOwner) {
       throw new NotFoundException(`Application ${id} not found`);
     }
 
-    return { application, profile, listing, isApplicant, isOwner };
+    return {
+      application,
+      profile,
+      listing: application.listing,
+      isApplicant,
+      isOwner,
+    };
   }
 
   async findOne(id: string, userId: string) {
