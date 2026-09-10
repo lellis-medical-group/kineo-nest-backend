@@ -74,9 +74,10 @@ export const auth = betterAuth({
       deleteTokenExpiresIn: 60 * 60 * 24,
 
       // Confirmation email before the hard delete: required for OAuth users
-      // (no password) and safer for everyone. The generated `url` targets the
-      // better-auth callback (`/api/auth/delete-user/callback`) which performs
-      // the deletion when opened by the authenticated user.
+      // (no password) and safer for everyone. The link targets the frontend
+      // `/goodbye` page, which completes the deletion by posting the token
+      // back to better-auth (`authClient.deleteUser({ token })`) — NestJS
+      // stays the sole auth server, same as every other email flow.
       sendDeleteAccountVerification: async ({ user, url }) => {
         // Accountability trail (art. 5(2) GDPR): record the request before
         // any execution. Never blocks the deletion flow on a bookkeeping
@@ -92,7 +93,7 @@ export const auth = betterAuth({
         await sendDeleteAccountEmail({
           email: user.email,
           name: user.name,
-          url,
+          url: buildFrontendAuthUrl(url, "/goodbye"),
         });
       },
 
