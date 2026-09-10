@@ -41,6 +41,27 @@ export async function sendResetPasswordEmail({
   });
 }
 
+export async function sendChangeEmailEmail({
+  email,
+  name,
+  url,
+}: {
+  email: string;
+  name?: string | null;
+  url: string;
+}) {
+  return sendNotificationEmail({
+    email,
+    name,
+    subject: "Confirmez votre nouvelle adresse email",
+    title: "Changement d'adresse email",
+    message:
+      "Une demande de changement d'adresse email a été effectuée sur votre compte. Confirmez cette adresse via le bouton ci-dessous pour l'appliquer. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email et votre adresse actuelle restera inchangée.",
+    url,
+    ctaLabel: "Confirmer ma nouvelle adresse",
+  });
+}
+
 export async function sendDeleteAccountEmail({
   email,
   name,

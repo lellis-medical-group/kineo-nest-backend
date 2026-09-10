@@ -5,6 +5,7 @@ import { jwt, openAPI } from "better-auth/plugins";
 import { emailVerificationStatusPlugin } from "./auth/email-verification-status";
 import { inputValidationHook } from "./auth/input-validation";
 import {
+  sendChangeEmailEmail,
   sendDeleteAccountEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
@@ -48,6 +49,23 @@ export const auth = betterAuth({
   ],
 
   user: {
+    // Email self-service (right to rectification, art. 16 GDPR): the
+    // confirmation email goes to the NEW address, so only someone controlling
+    // it can apply the change.
+    changeEmail: {
+      enabled: true,
+
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+        await sendChangeEmailEmail({
+          email: newEmail,
+          name: user.name,
+          url: buildFrontendAuthUrl(url, "/verify-email", {
+            email: newEmail,
+          }),
+        });
+      },
+    },
+
     deleteUser: {
       enabled: true,
 
