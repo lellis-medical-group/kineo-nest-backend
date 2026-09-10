@@ -4,7 +4,11 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt, openAPI } from "better-auth/plugins";
 import { emailVerificationStatusPlugin } from "./auth/email-verification-status";
 import { inputValidationHook } from "./auth/input-validation";
-import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
+import {
+  sendDeleteAccountEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} from "./email";
 import { buildFrontendAuthUrl } from "./email/links";
 import { createPrismaClient } from "./prisma";
 
@@ -42,6 +46,50 @@ export const auth = betterAuth({
         ]
       : []),
   ],
+
+  user: {
+    deleteUser: {
+      enabled: true,
+
+      // The deletion verification token lives 24h in the `verification` table
+      // (identifier: `delete-account-<token>`, value: user id).
+      deleteTokenExpiresIn: 60 * 60 * 24,
+
+      // Confirmation email before the hard delete: required for OAuth users
+      // (no password) and safer for everyone. The generated `url` targets the
+      // better-auth callback (`/api/auth/delete-user/callback`) which performs
+      // the deletion when opened by the authenticated user.
+      sendDeleteAccountVerification: async ({ user, url }) => {
+        await sendDeleteAccountEmail({
+          email: user.email,
+          name: user.name,
+          url,
+        });
+      },
+
+      // `verification` rows have no foreign key to `user`: without this
+      // cleanup, tokens tied to the deleted identity (pending email
+      // verification, password reset keyed by email, and unredeemed
+      // delete-account tokens keyed by user id) would outlive the account.
+      beforeDelete: async (user) => {
+        await prisma.verification.deleteMany({
+          where: {
+            OR: [
+              { identifier: user.email },
+              {
+                identifier: { startsWith: "delete-account-" },
+                value: user.id,
+              },
+            ],
+          },
+        });
+      },
+
+      afterDelete: async (user) => {
+        console.log(`User account permanently deleted: ${user.id}`);
+      },
+    },
+  },
 
   secret: process.env.BETTER_AUTH_SECRET,
 

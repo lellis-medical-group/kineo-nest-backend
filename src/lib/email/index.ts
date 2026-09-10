@@ -41,6 +41,27 @@ export async function sendResetPasswordEmail({
   });
 }
 
+export async function sendDeleteAccountEmail({
+  email,
+  name,
+  url,
+}: {
+  email: string;
+  name?: string | null;
+  url: string;
+}) {
+  return sendNotificationEmail({
+    email,
+    name,
+    subject: "Suppression de votre compte",
+    title: "Suppression de votre compte",
+    message:
+      "Vous avez demandé la suppression définitive de votre compte et de vos données. Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
+    url,
+    ctaLabel: "Supprimer mon compte",
+  });
+}
+
 export async function sendNotificationEmail({
   email,
   name,
