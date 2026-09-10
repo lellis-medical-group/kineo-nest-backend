@@ -3,12 +3,14 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from "@nestjs/core";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "@thallesp/nestjs-better-auth";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod";
 import { AppController } from "./app.controller";
 import { ApplicationsModule } from "./applications/applications.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception/http-exception.filter";
 import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-proxy.guard";
 import configuration from "./config/configuration";
+import { DataLifecycleModule } from "./data-lifecycle/data-lifecycle.module";
 import { HealthModule } from "./health/health.module";
 import { auth } from "./lib/auth";
 import { PracticesModule } from "./practices/practices.module";
@@ -19,6 +21,7 @@ import { ReplacementlistingsModule } from "./replacementlistings/replacementlist
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -48,6 +51,7 @@ import { ReplacementlistingsModule } from "./replacementlistings/replacementlist
     PracticesModule,
     ReplacementlistingsModule,
     ApplicationsModule,
+    DataLifecycleModule,
     HealthModule,
   ],
   controllers: [AppController],
