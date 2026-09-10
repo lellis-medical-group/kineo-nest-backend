@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import {
   AllowAnonymous,
@@ -18,6 +17,7 @@ import {
   Session,
 } from "@thallesp/nestjs-better-auth";
 import { ZodSerializerDto } from "nestjs-zod";
+import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import { EmailVerifiedGuard } from "../common/guards/email-verified.guard";
 import type { CreateReplacementListingDto } from "./dto/create-replacementlisting.dto";
 import { FindReplacementListingsDto } from "./dto/find-replacementlistings.dto";
@@ -69,9 +69,12 @@ export class ReplacementlistingsController {
   @ApiOperation({
     summary: "List all listings created by the current user, any status",
   })
-  @ZodSerializerDto([ReplacementListing])
-  findMine(@Session() session: UserSession) {
-    return this.replacementlistingsService.findMine(session.user.id);
+  @ZodSerializerDto(PaginatedReplacementListings)
+  findMine(
+    @Session() session: UserSession,
+    @Query() query: FindReplacementListingsDto,
+  ) {
+    return this.replacementlistingsService.findMine(session.user.id, query);
   }
 
   @Get(":id")

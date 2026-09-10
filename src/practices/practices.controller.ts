@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 import {
   AllowAnonymous,
@@ -18,6 +17,7 @@ import {
   Session,
 } from "@thallesp/nestjs-better-auth";
 import { ZodSerializerDto } from "nestjs-zod";
+import { ThrottleWithConfig } from "../common/decorators/throttle-with-config.decorator";
 import { EmailVerifiedGuard } from "../common/guards/email-verified.guard";
 import { CreatePracticeDto } from "./dto/create-practice.dto";
 import { FindPracticesDto } from "./dto/find-practices.dto";

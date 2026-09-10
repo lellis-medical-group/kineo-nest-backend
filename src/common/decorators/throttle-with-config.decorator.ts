@@ -14,9 +14,7 @@ const config = configuration();
  *
  * @param throttleName - The name of the throttle tier to apply ("short", "medium", or "long")
  */
-export function ThrottleWithConfig(
-  throttleName: "short" | "medium" | "long",
-) {
+export function ThrottleWithConfig(throttleName: "short" | "medium" | "long") {
   const throttleConfig = config.throttle[throttleName];
 
   const skipOthers: Record<"short" | "medium" | "long", boolean> = {

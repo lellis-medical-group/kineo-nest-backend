@@ -69,6 +69,36 @@ export class ApplicationsService {
     }
   }
 
+  /**
+   * Totals per status over the whole collection, so tab counters stay stable
+   * across pages and filters.
+   */
+  private async countApplicationsByStatus(
+    where: Prisma.ApplicationWhereInput,
+  ): Promise<{ total: number } & Record<ApplicationStatus, number>> {
+    const grouped = await this.prisma.application.groupBy({
+      by: ["status"],
+      where,
+      _count: true,
+    });
+
+    const counts = {
+      total: 0,
+      PENDING: 0,
+      SHORTLISTED: 0,
+      ACCEPTED: 0,
+      REJECTED: 0,
+      WITHDRAWN: 0,
+    } as { total: number } & Record<ApplicationStatus, number>;
+
+    for (const row of grouped) {
+      counts[row.status] = row._count;
+      counts.total += row._count;
+    }
+
+    return counts;
+  }
+
   async create(userId: string, dto: CreateApplicationDto) {
     const profile = await getOwnedProfile(this.prisma, userId);
 
@@ -189,30 +219,77 @@ export class ApplicationsService {
 
     const where = { listingId, status: filters.status };
 
-    const [data, total] = await Promise.all([
-      this.prisma.application.findMany({ where, skip, take: limit }),
+    const [data, total, counts] = await Promise.all([
+      this.prisma.application.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: { applicant: { include: { user: true } } },
+      }),
       this.prisma.application.count({ where }),
+      this.countApplicationsByStatus({ listingId }),
     ]);
 
     return {
       data: data.map(toApplicationDto),
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        counts,
+      },
     };
   }
 
-  async findMine(userId: string) {
+  async findMine(userId: string, filters: FindApplicationsDto) {
     const profile = await getOwnedProfile(this.prisma, userId);
 
-    const applications = await this.prisma.application.findMany({
-      where: { applicantId: profile.id },
-    });
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const skip = (page - 1) * limit;
 
-    return applications.map(toApplicationDto);
+    const where = {
+      applicantId: profile.id,
+      status: filters.status,
+      listingId: filters.listingId,
+    };
+
+    const [data, total, counts] = await Promise.all([
+      this.prisma.application.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: { listing: { include: { practice: true } } },
+      }),
+      this.prisma.application.count({ where }),
+      this.countApplicationsByStatus({
+        applicantId: profile.id,
+        listingId: filters.listingId,
+      }),
+    ]);
+
+    return {
+      data: data.map(toApplicationDto),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        counts,
+      },
+    };
   }
 
   private async assertAccess(id: string, userId: string) {
     const application = await this.prisma.application.findUnique({
       where: { id },
+      include: {
+        listing: { include: { practice: true } },
+        applicant: { include: { user: true } },
+      },
     });
 
     if (!application) {
@@ -220,18 +297,21 @@ export class ApplicationsService {
     }
 
     const profile = await getOwnedProfile(this.prisma, userId);
-    const listing = await this.prisma.replacementListing.findUniqueOrThrow({
-      where: { id: application.listingId },
-    });
 
     const isApplicant = application.applicantId === profile.id;
-    const isOwner = listing.createdById === profile.id;
+    const isOwner = application.listing.createdById === profile.id;
 
     if (!isApplicant && !isOwner) {
       throw new NotFoundException(`Application ${id} not found`);
     }
 
-    return { application, profile, listing, isApplicant, isOwner };
+    return {
+      application,
+      profile,
+      listing: application.listing,
+      isApplicant,
+      isOwner,
+    };
   }
 
   async findOne(id: string, userId: string) {

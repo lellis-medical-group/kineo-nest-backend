@@ -4,6 +4,7 @@ import { FindReplacementListingsSchema } from "./find-replacementlistings.dto";
 import { UpdateReplacementListingSchema } from "./update-replacementlisting.dto";
 
 const validListing = {
+  title: "Remplacement de novembre",
   practiceId: "clh8zq6w70000wqf4vlonix5a",
   startDate: "2026-09-10T08:00:00.000Z",
   endDate: "2026-09-12T08:00:00.000Z",
@@ -16,6 +17,47 @@ describe("ReplacementListing DTO security", () => {
       expect(
         CreateReplacementListingSchema.safeParse(validListing).success,
       ).toBe(true);
+    });
+
+    it("requires a title", () => {
+      const { title: _title, ...withoutTitle } = validListing;
+      expect(
+        CreateReplacementListingSchema.safeParse(withoutTitle).success,
+      ).toBe(false);
+    });
+
+    it("trims the title and rejects empty or invisible characters", () => {
+      const trimmed = CreateReplacementListingSchema.safeParse({
+        ...validListing,
+        title: "  Remplacement de novembre  ",
+      });
+      expect(trimmed.success).toBe(true);
+      if (trimmed.success) {
+        expect(trimmed.data.title).toBe("Remplacement de novembre");
+      }
+
+      expect(
+        CreateReplacementListingSchema.safeParse({
+          ...validListing,
+          title: "   ",
+        }).success,
+      ).toBe(false);
+
+      expect(
+        CreateReplacementListingSchema.safeParse({
+          ...validListing,
+          title: "Remplacement\u200Burgent",
+        }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a title longer than 150 characters", () => {
+      expect(
+        CreateReplacementListingSchema.safeParse({
+          ...validListing,
+          title: "x".repeat(151),
+        }).success,
+      ).toBe(false);
     });
 
     it("rejects unknown keys (mass-assignment protection)", () => {
@@ -104,6 +146,11 @@ describe("ReplacementListing DTO security", () => {
         UpdateReplacementListingSchema.safeParse({ urgent: true }).success,
       ).toBe(true);
       expect(UpdateReplacementListingSchema.safeParse({}).success).toBe(true);
+      expect(
+        UpdateReplacementListingSchema.safeParse({
+          title: "Nouveau titre",
+        }).success,
+      ).toBe(true);
     });
 
     it("validates date order when both dates are updated", () => {

@@ -5,6 +5,9 @@ import { Specialty } from "../../generated/prisma/enums";
 
 export const UpdateReplacementListingSchema = z
   .object({
+    title: textField(150, "Title")
+      .optional()
+      .describe("Public title of the listing, shown to replacement candidates"),
     startDate: z.iso
       .datetime()
       .optional()

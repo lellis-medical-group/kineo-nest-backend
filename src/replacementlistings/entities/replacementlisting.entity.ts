@@ -6,6 +6,7 @@ export const ReplacementListingSchema = z.object({
   id: z.string(),
   practiceId: z.string(),
   createdById: z.string(),
+  title: z.string(),
   startDate: z.iso.datetime(),
   endDate: z.iso.datetime(),
   specialty: z.enum(Specialty),

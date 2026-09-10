@@ -88,6 +88,7 @@ export class ReplacementlistingsService {
           data: {
             practiceId: dto.practiceId,
             createdById: profileId,
+            title: dto.title,
             startDate: new Date(dto.startDate),
             endDate: new Date(dto.endDate),
             specialty: dto.specialty,
@@ -102,13 +103,8 @@ export class ReplacementlistingsService {
     return toReplacementListingDto({ ...listing, applicationsCount: 0 });
   }
 
-  async findAll(filters: FindReplacementListingsDto) {
-    const page = filters.page ?? 1;
-    const limit = filters.limit ?? 20;
-    const skip = (page - 1) * limit;
-
-    const where = {
-      status: "OPEN" as const,
+  private buildListingsWhere(filters: FindReplacementListingsDto) {
+    return {
       specialty: filters.specialty,
       urgent: filters.urgent,
       startDate:
@@ -125,6 +121,17 @@ export class ReplacementlistingsService {
       practice: filters.city
         ? { city: { contains: filters.city, mode: "insensitive" as const } }
         : undefined,
+    };
+  }
+
+  async findAll(filters: FindReplacementListingsDto) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      status: "OPEN" as const,
+      ...this.buildListingsWhere(filters),
     };
 
     const [data, total] = await Promise.all([
@@ -146,17 +153,35 @@ export class ReplacementlistingsService {
     };
   }
 
-  async findMine(userId: string) {
+  async findMine(userId: string, filters: FindReplacementListingsDto) {
     const profileId = await getOwnedProfileId(this.prisma, userId);
 
-    const listings = await this.prisma.replacementListing.findMany({
-      where: { createdById: profileId },
-      include: APPLICATIONS_COUNT_INCLUDE,
-    });
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const skip = (page - 1) * limit;
 
-    return listings.map((listing) =>
-      toReplacementListingDto(this.withCount(listing)),
-    );
+    const where = {
+      createdById: profileId,
+      ...this.buildListingsWhere(filters),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.replacementListing.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: APPLICATIONS_COUNT_INCLUDE,
+      }),
+      this.prisma.replacementListing.count({ where }),
+    ]);
+
+    return {
+      data: data.map((listing) =>
+        toReplacementListingDto(this.withCount(listing)),
+      ),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string, requesterUserId?: string) {

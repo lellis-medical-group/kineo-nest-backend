@@ -5,6 +5,9 @@ import { Specialty } from "../../generated/prisma/enums";
 
 export const CreateReplacementListingSchema = z
   .object({
+    title: textField(150, "Title").describe(
+      "Public title of the listing, shown to replacement candidates",
+    ),
     practiceId: z
       .cuid()
       .describe("Id of the practice this listing belongs to (Prisma cuid)"),
