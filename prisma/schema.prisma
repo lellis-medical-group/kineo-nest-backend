@@ -112,6 +112,11 @@ enum ApplicationStatus {
   WITHDRAWN
 }
 
+enum DataDeletionRequestStatus {
+  PENDING
+  EXECUTED
+}
+
 model Profile {
   id           String               @id @default(cuid())
   userId       String               @unique
@@ -199,4 +204,23 @@ model Application {
   @@index([applicantId, createdAt(sort: Desc)], where: { status: "PENDING" }, map: "app_applicant_pending_idx")
   @@index([applicantId, createdAt(sort: Desc)], where: { status: "SHORTLISTED" }, map: "app_applicant_shortlisted_idx")
   @@map("application")
+}
+
+/**
+ * GDPR accountability trail (art. 5(2), 17): records each account-deletion
+ * request and its execution. Deliberately has NO foreign key to `user`: the
+ * row must survive the account hard delete (which cascades everything else)
+ * so the request/execution timeline stays provable.
+ */
+model DataDeletionRequest {
+  id         String                    @id @default(cuid())
+  userId     String
+  email      String
+  status     DataDeletionRequestStatus @default(PENDING)
+  createdAt  DateTime                  @default(now())
+  executedAt DateTime?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId], where: { status: "PENDING" })
+  @@map("data_deletion_request")
 }

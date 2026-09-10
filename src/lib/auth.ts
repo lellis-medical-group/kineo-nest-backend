@@ -78,6 +78,17 @@ export const auth = betterAuth({
       // better-auth callback (`/api/auth/delete-user/callback`) which performs
       // the deletion when opened by the authenticated user.
       sendDeleteAccountVerification: async ({ user, url }) => {
+        // Accountability trail (art. 5(2) GDPR): record the request before
+        // any execution. Never blocks the deletion flow on a bookkeeping
+        // failure — the sweep keeps the process resilient.
+        try {
+          await prisma.dataDeletionRequest.create({
+            data: { userId: user.id, email: user.email },
+          });
+        } catch (error) {
+          console.error("Failed to record data deletion request:", error);
+        }
+
         await sendDeleteAccountEmail({
           email: user.email,
           name: user.name,
@@ -90,6 +101,21 @@ export const auth = betterAuth({
       // verification, password reset keyed by email, and unredeemed
       // delete-account tokens keyed by user id) would outlive the account.
       beforeDelete: async (user) => {
+        // The partial unique index guarantees at most one pending row per
+        // user, but updateMany keeps this idempotent.
+        try {
+          await prisma.dataDeletionRequest.updateMany({
+            where: { userId: user.id, status: "PENDING" },
+            data: { status: "EXECUTED", executedAt: new Date() },
+          });
+        } catch (error) {
+          console.error("Failed to mark data deletion request executed:", error);
+        }
+
+        // `verification` rows have no foreign key to `user`: without this
+        // cleanup, tokens tied to the deleted identity (pending email
+        // verification, password reset keyed by email, and unredeemed
+        // delete-account tokens keyed by user id) would outlive the account.
         await prisma.verification.deleteMany({
           where: {
             OR: [
