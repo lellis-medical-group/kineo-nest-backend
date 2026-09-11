@@ -6,6 +6,7 @@ import { AuthModule } from "@thallesp/nestjs-better-auth";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod";
 import { AppController } from "./app.controller";
+import { AccountDeletionModule } from "./account-deletion/account-deletion.module";
 import { ApplicationsModule } from "./applications/applications.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception/http-exception.filter";
 import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-proxy.guard";
@@ -47,6 +48,7 @@ import { ReplacementlistingsModule } from "./replacementlistings/replacementlist
       }),
     }),
     AuthModule.forRoot({ auth }),
+    AccountDeletionModule,
     ProfileModule,
     PracticesModule,
     ReplacementlistingsModule,
