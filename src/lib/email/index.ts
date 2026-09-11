@@ -77,7 +77,7 @@ export async function sendDeleteAccountEmail({
     subject: "Suppression de votre compte",
     title: "Suppression de votre compte",
     message:
-      "Vous avez demandé la suppression définitive de votre compte et de vos données. Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
+      "Vous avez demandé la suppression définitive de votre compte et de vos données. Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email. Pour des raisons de preuve (RGPD), la trace de votre demande (adresse e-mail et date) est conservée pendant une durée limitée définie dans notre politique de confidentialité.",
     url,
     ctaLabel: "Supprimer mon compte",
   });

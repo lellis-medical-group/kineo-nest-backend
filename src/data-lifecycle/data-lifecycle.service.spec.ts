@@ -3,7 +3,7 @@ import { PrismaService } from "../prisma.service";
 import { DataLifecycleService } from "./data-lifecycle.service";
 
 describe("DataLifecycleService", () => {
-  it("purges expired sessions and verifications only", async () => {
+  it("purges expired sessions, verifications and expired deletion requests", async () => {
     const calls: { model: string; where: unknown }[] = [];
     const prisma = {
       session: {
@@ -18,19 +18,38 @@ describe("DataLifecycleService", () => {
           return { count: 2 };
         },
       },
+      dataDeletionRequest: {
+        deleteMany: async ({ where }: { where: unknown }) => {
+          calls.push({ model: "dataDeletionRequest", where });
+          return { count: 1 };
+        },
+      },
     } as unknown as PrismaService;
 
     const service = new DataLifecycleService(prisma);
     await service.purgeExpired();
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(calls[0]).toMatchObject({ model: "session" });
     expect(calls[1]).toMatchObject({ model: "verification" });
+    expect(calls[2]).toMatchObject({ model: "dataDeletionRequest" });
 
-    const where = (calls[0].where ?? {}) as Record<string, unknown>;
-    const expiresAt = (where.expiresAt ?? {}) as Record<string, unknown>;
-    expect(expiresAt.lt).toBeInstanceOf(Date);
-    expect((expiresAt.lt as Date).getTime()).toBeLessThanOrEqual(Date.now());
+    const sessionWhere = (calls[0].where ?? {}) as {
+      expiresAt?: { lt?: Date };
+    };
+    expect(sessionWhere.expiresAt?.lt).toBeInstanceOf(Date);
+    expect(sessionWhere.expiresAt!.lt!.getTime()).toBeLessThanOrEqual(
+      Date.now(),
+    );
+
+    // Default retention is 365 days: the cutoff must sit ~1 year in the past.
+    const deletionWhere = (calls[2].where ?? {}) as {
+      createdAt?: { lt?: Date };
+    };
+    const cutoff = deletionWhere.createdAt?.lt;
+    expect(cutoff).toBeInstanceOf(Date);
+    expect(cutoff!.getTime()).toBeLessThan(Date.now() - 364 * 86_400_000);
+    expect(cutoff!.getTime()).toBeGreaterThan(Date.now() - 366 * 86_400_000);
   });
 
   it("never throws when the sweep fails", async () => {
@@ -41,6 +60,9 @@ describe("DataLifecycleService", () => {
         },
       },
       verification: {
+        deleteMany: async () => ({ count: 0 }),
+      },
+      dataDeletionRequest: {
         deleteMany: async () => ({ count: 0 }),
       },
     } as unknown as PrismaService;

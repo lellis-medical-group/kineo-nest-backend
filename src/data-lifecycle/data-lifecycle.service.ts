@@ -2,6 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../prisma.service";
 
+/** Default retention horizon for the account-deletion audit trail (days). */
+const DELETION_REQUEST_RETENTION_DAYS = 365;
+
 /**
  * Scheduled retention sweeps (data minimization, art. 5(1)(e) GDPR): rows that
  * carry PII and are no longer useful must not outlive their expiry.
@@ -10,9 +13,18 @@ import { PrismaService } from "../prisma.service";
  * - `verification`: better-auth only deletes expired rows lazily, when a given
  *   identifier is read; unread rows (abandoned sign-up, one-time delete links)
  *   would stay forever. Rows carry the raw email as `identifier`.
+ * - `dataDeletionRequest`: the accountability trail stores the email of the
+ *   deleted account — a justified retention, but not a forever one. It is
+ *   dropped after a bounded legal horizon (default 1 year, override with
+ *   DATA_DELETION_REQUEST_RETENTION_DAYS), regardless of status: a PENDING
+ *   row means the 24h token window passed without confirmation, so it no
+ *   longer holds any value either.
  */
 @Injectable()
 export class DataLifecycleService {
+  private readonly deletionRequestRetentionDays =
+    deletionRequestRetentionDaysFromEnv();
+
   constructor(private readonly prisma: PrismaService) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -28,9 +40,22 @@ export class DataLifecycleService {
         where: { expiresAt: { lt: now } },
       });
 
-      if (sessions.count > 0 || verifications.count > 0) {
+      const deletionCutoff = new Date(
+        now.getTime() - this.deletionRequestRetentionDays * 86_400_000,
+      );
+      const deletionRequests = await this.prisma.dataDeletionRequest.deleteMany(
+        {
+          where: { createdAt: { lt: deletionCutoff } },
+        },
+      );
+
+      if (
+        sessions.count > 0 ||
+        verifications.count > 0 ||
+        deletionRequests.count > 0
+      ) {
         console.log(
-          `Data lifecycle sweep: purged ${sessions.count} expired session(s) and ${verifications.count} expired verification(s)`,
+          `Data lifecycle sweep: purged ${sessions.count} expired session(s), ${verifications.count} expired verification(s) and ${deletionRequests.count} deletion request(s) older than ${this.deletionRequestRetentionDays}d`,
         );
       }
     } catch (error) {
@@ -38,4 +63,18 @@ export class DataLifecycleService {
       console.error("Data lifecycle sweep failed:", error);
     }
   }
+}
+
+function deletionRequestRetentionDaysFromEnv(): number {
+  const raw = process.env.DATA_DELETION_REQUEST_RETENTION_DAYS;
+  if (!raw) {
+    return DELETION_REQUEST_RETENTION_DAYS;
+  }
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(
+      "DATA_DELETION_REQUEST_RETENTION_DAYS must be a positive integer",
+    );
+  }
+  return parsed;
 }
