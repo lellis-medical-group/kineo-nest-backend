@@ -110,7 +110,10 @@ export const auth = betterAuth({
             data: { status: "EXECUTED", executedAt: new Date() },
           });
         } catch (error) {
-          console.error("Failed to mark data deletion request executed:", error);
+          console.error(
+            "Failed to mark data deletion request executed:",
+            error,
+          );
         }
 
         // `verification` rows have no foreign key to `user`: without this
