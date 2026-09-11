@@ -73,15 +73,19 @@ export const auth = betterAuth({
       // (identifier: `delete-account-<token>`, value: user id).
       deleteTokenExpiresIn: 60 * 60 * 24,
 
-      // Confirmation email before the hard delete: required for OAuth users
-      // (no password) and safer for everyone. The link targets the frontend
-      // `/goodbye` page, which completes the deletion by posting the token
-      // back to better-auth (`authClient.deleteUser({ token })`) — NestJS
-      // stays the sole auth server, same as every other email flow.
+      // Better-auth is limited to the REQUEST phase: mint the single-use token
+      // and email the confirmation link (frontend `/goodbye`). The hard delete
+      // itself is done by `POST /account/confirm-deletion`
+      // (AccountDeletionService): it consumes the token without requiring a
+      // session, performs the audit tracking (DataDeletionRequest -> EXECUTED)
+      // and purges `verification` leftovers, all in one transaction. The
+      // deletion callbacks (beforeDelete/afterDelete) are intentionally NOT
+      // wired here — better-auth never deletes the user in this flow, so they
+      // would be dead code.
       sendDeleteAccountVerification: async ({ user, url }) => {
         // Accountability trail (art. 5(2) GDPR): record the request before
         // any execution. Never blocks the deletion flow on a bookkeeping
-        // failure — the sweep keeps the process resilient.
+        // failure — the hourly sweep keeps the process resilient.
         try {
           await prisma.dataDeletionRequest.create({
             data: { userId: user.id, email: user.email },
@@ -95,46 +99,6 @@ export const auth = betterAuth({
           name: user.name,
           url: buildFrontendAuthUrl(url, "/goodbye"),
         });
-      },
-
-      // `verification` rows have no foreign key to `user`: without this
-      // cleanup, tokens tied to the deleted identity (pending email
-      // verification, password reset keyed by email, and unredeemed
-      // delete-account tokens keyed by user id) would outlive the account.
-      beforeDelete: async (user) => {
-        // The partial unique index guarantees at most one pending row per
-        // user, but updateMany keeps this idempotent.
-        try {
-          await prisma.dataDeletionRequest.updateMany({
-            where: { userId: user.id, status: "PENDING" },
-            data: { status: "EXECUTED", executedAt: new Date() },
-          });
-        } catch (error) {
-          console.error(
-            "Failed to mark data deletion request executed:",
-            error,
-          );
-        }
-
-        // `verification` rows have no foreign key to `user`: without this
-        // cleanup, tokens tied to the deleted identity (pending email
-        // verification, password reset keyed by email, and unredeemed
-        // delete-account tokens keyed by user id) would outlive the account.
-        await prisma.verification.deleteMany({
-          where: {
-            OR: [
-              { identifier: user.email },
-              {
-                identifier: { startsWith: "delete-account-" },
-                value: user.id,
-              },
-            ],
-          },
-        });
-      },
-
-      afterDelete: async (user) => {
-        console.log(`User account permanently deleted: ${user.id}`);
       },
     },
   },
