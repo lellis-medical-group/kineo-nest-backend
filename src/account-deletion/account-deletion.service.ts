@@ -1,4 +1,5 @@
 import { GoneException, Injectable, NotFoundException } from "@nestjs/common";
+import { logEvent } from "../lib/log";
 import { PrismaService } from "../prisma.service";
 
 /** Prefix of the single-use deletion token rows in the `verification` table. */
@@ -27,6 +28,9 @@ export class AccountDeletionService {
 
   async confirmDeletion(token: string): Promise<void> {
     const trimmed = token.trim();
+
+    let deletedUserId: string | null = null;
+    let deletedUserEmail: string | null = null;
 
     await this.prisma.$transaction(async (tx) => {
       const verification = await tx.verification.findFirst({
@@ -59,6 +63,8 @@ export class AccountDeletionService {
       }
 
       const userEmail = user.email;
+      deletedUserId = userId;
+      deletedUserEmail = userEmail;
 
       await tx.dataDeletionRequest.updateMany({
         where: { userId, status: "PENDING" },
@@ -83,6 +89,11 @@ export class AccountDeletionService {
       });
     });
 
-    console.log("User account permanently deleted via email confirmation link");
+    if (deletedUserId) {
+      logEvent("account.deletion.confirmed", {
+        userId: deletedUserId,
+        email: deletedUserEmail,
+      });
+    }
   }
 }

@@ -11,6 +11,7 @@ import {
   sendVerificationEmail,
 } from "./email";
 import { buildFrontendAuthUrl } from "./email/links";
+import { logError } from "./log";
 import { createPrismaClient } from "./prisma";
 
 const prisma = createPrismaClient();
@@ -91,7 +92,9 @@ export const auth = betterAuth({
             data: { userId: user.id, email: user.email },
           });
         } catch (error) {
-          console.error("Failed to record data deletion request:", error);
+          logError("account.deletion.request.audit_failed", error, {
+            userId: user.id,
+          });
         }
 
         await sendDeleteAccountEmail({

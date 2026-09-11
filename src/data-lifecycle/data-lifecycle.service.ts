@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import { logError, logEvent } from "../lib/log";
 import { PrismaService } from "../prisma.service";
 
 /** Default retention horizon for the account-deletion audit trail (days). */
@@ -54,13 +55,16 @@ export class DataLifecycleService {
         verifications.count > 0 ||
         deletionRequests.count > 0
       ) {
-        console.log(
-          `Data lifecycle sweep: purged ${sessions.count} expired session(s), ${verifications.count} expired verification(s) and ${deletionRequests.count} deletion request(s) older than ${this.deletionRequestRetentionDays}d`,
-        );
+        logEvent("data_lifecycle.sweep", {
+          sessionsPurged: sessions.count,
+          verificationsPurged: verifications.count,
+          deletionRequestsPurged: deletionRequests.count,
+          retentionDays: this.deletionRequestRetentionDays,
+        });
       }
     } catch (error) {
       // Never break the process over a sweep: it will run again on schedule.
-      console.error("Data lifecycle sweep failed:", error);
+      logError("data_lifecycle.sweep_failed", error);
     }
   }
 }
