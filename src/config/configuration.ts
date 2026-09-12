@@ -161,7 +161,7 @@ export default () => ({
     return parsed;
   })(),
 
-  // ---- Swagger (peuvent être surchargés par env si nécessaire) ----
+  // ---- Swagger (can be overridden via env if needed) ----
   swagger: {
     title: "Kineo API",
     description: "Kineo API documentation",
@@ -171,21 +171,12 @@ export default () => ({
 });
 
 // ============================================================
-// Schéma de validation des variables d'environnement (Zod)
-// ============================================================
-// Utilisé par ConfigModule.withForRoot({ validationSchema }) pour valider
-// que toutes les variables requises sont présentes et correctement
-// typées au démarrage de l'application.
-//
-// Les variables marquées comme "required" (sans .default()) font
-// échouer le bootstrap si elles sont manquantes ou invalides.
-// ============================================================
-
 // Environment variable validation schema (Zod).
 // Used by ConfigModule.forRoot({ validationSchema }) to validate that all
 // required environment variables are present and correctly typed at startup.
 //
-// Required variables (no .default()) cause bootstrap to fail if missing or invalid.
+// Required variables (no .default()) cause bootstrap to fail if missing/invalid.
+// ============================================================
 
 const BoolEnum = z.enum(["true", "false"]);
 const NodeEnvEnum = z.enum(["development", "production", "test", "provision"]);
