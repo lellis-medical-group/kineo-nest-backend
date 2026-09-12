@@ -26,7 +26,7 @@ function positiveIntegerOrUndefined(
   return positiveInteger(value, fallback, name);
 }
 
-/** Durée en secondes pour un suffixe comme "15m", "1h", "7d". */
+/** Duration in seconds for a suffix like "15m", "1h", "7d". */
 function durationSeconds(raw: string | undefined, fallback: number): number {
   if (!raw) return fallback;
   const match = /^(\d+)\s*(ms|s|m|h|d|w)$/i.exec(raw.trim());
@@ -95,7 +95,7 @@ export default () => ({
     },
   },
 
-  // ---- Rate limiting (better-auth internal, distinct du ThrottlerModule) ----
+  // ---- Rate limiting (better-auth internal, separate from ThrottlerModule) ----
   rateLimit: {
     window: positiveInteger(
       process.env.RATE_LIMIT_WINDOW,
@@ -109,11 +109,11 @@ export default () => ({
   session: {
     expiresIn: durationSeconds(
       process.env.SESSION_EXPIRES_IN,
-      60 * 60 * 24 * 7, // 7 jours
+      60 * 60 * 24 * 7, // 7 days
     ),
     updateAge: durationSeconds(
       process.env.SESSION_UPDATE_AGE,
-      60 * 60 * 24, // 1 jour
+      60 * 60 * 24, // 1 day
     ),
     cookieCache: {
       enabled: process.env.COOKIE_CACHE_ENABLED !== "false",
@@ -125,7 +125,7 @@ export default () => ({
     },
   },
 
-  // ---- JWT (better-auth, optionnel) ----
+  // ---- JWT (better-auth, optional) ----
   jwt: {
     enabled: process.env.JWT_ENABLED === "true",
     expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
