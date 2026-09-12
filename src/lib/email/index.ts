@@ -41,6 +41,48 @@ export async function sendResetPasswordEmail({
   });
 }
 
+export async function sendChangeEmailEmail({
+  email,
+  name,
+  url,
+}: {
+  email: string;
+  name?: string | null;
+  url: string;
+}) {
+  return sendNotificationEmail({
+    email,
+    name,
+    subject: "Confirmez votre nouvelle adresse email",
+    title: "Changement d'adresse email",
+    message:
+      "Une demande de changement d'adresse email a été effectuée sur votre compte. Confirmez cette adresse via le bouton ci-dessous pour l'appliquer. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email et votre adresse actuelle restera inchangée.",
+    url,
+    ctaLabel: "Confirmer ma nouvelle adresse",
+  });
+}
+
+export async function sendDeleteAccountEmail({
+  email,
+  name,
+  url,
+}: {
+  email: string;
+  name?: string | null;
+  url: string;
+}) {
+  return sendNotificationEmail({
+    email,
+    name,
+    subject: "Suppression de votre compte",
+    title: "Suppression de votre compte",
+    message:
+      "Vous avez demandé la suppression définitive de votre compte et de vos données. Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email. Pour des raisons de preuve (RGPD), la trace de votre demande (adresse e-mail et date) est conservée pendant une durée limitée définie dans notre politique de confidentialité.",
+    url,
+    ctaLabel: "Supprimer mon compte",
+  });
+}
+
 export async function sendNotificationEmail({
   email,
   name,

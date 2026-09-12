@@ -4,8 +4,14 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt, openAPI } from "better-auth/plugins";
 import { emailVerificationStatusPlugin } from "./auth/email-verification-status";
 import { inputValidationHook } from "./auth/input-validation";
-import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
+import {
+  sendChangeEmailEmail,
+  sendDeleteAccountEmail,
+  sendResetPasswordEmail,
+  sendVerificationEmail,
+} from "./email";
 import { buildFrontendAuthUrl } from "./email/links";
+import { logError } from "./log";
 import { createPrismaClient } from "./prisma";
 
 const prisma = createPrismaClient();
@@ -42,6 +48,63 @@ export const auth = betterAuth({
         ]
       : []),
   ],
+
+  user: {
+    // Email self-service (right to rectification, art. 16 GDPR): the
+    // confirmation email goes to the NEW address, so only someone controlling
+    // it can apply the change.
+    changeEmail: {
+      enabled: true,
+
+      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+        await sendChangeEmailEmail({
+          email: newEmail,
+          name: user.name,
+          url: buildFrontendAuthUrl(url, "/verify-email", {
+            email: newEmail,
+          }),
+        });
+      },
+    },
+
+    deleteUser: {
+      enabled: true,
+
+      // The deletion verification token lives 24h in the `verification` table
+      // (identifier: `delete-account-<token>`, value: user id).
+      deleteTokenExpiresIn: 60 * 60 * 24,
+
+      // Better-auth is limited to the REQUEST phase: mint the single-use token
+      // and email the confirmation link (frontend `/goodbye`). The hard delete
+      // itself is done by `POST /account/confirm-deletion`
+      // (AccountDeletionService): it consumes the token without requiring a
+      // session, performs the audit tracking (DataDeletionRequest -> EXECUTED)
+      // and purges `verification` leftovers, all in one transaction. The
+      // deletion callbacks (beforeDelete/afterDelete) are intentionally NOT
+      // wired here — better-auth never deletes the user in this flow, so they
+      // would be dead code.
+      sendDeleteAccountVerification: async ({ user, url }) => {
+        // Accountability trail (art. 5(2) GDPR): record the request before
+        // any execution. Never blocks the deletion flow on a bookkeeping
+        // failure — the hourly sweep keeps the process resilient.
+        try {
+          await prisma.dataDeletionRequest.create({
+            data: { userId: user.id, email: user.email },
+          });
+        } catch (error) {
+          logError("account.deletion.request.audit_failed", error, {
+            userId: user.id,
+          });
+        }
+
+        await sendDeleteAccountEmail({
+          email: user.email,
+          name: user.name,
+          url: buildFrontendAuthUrl(url, "/goodbye"),
+        });
+      },
+    },
+  },
 
   secret: process.env.BETTER_AUTH_SECRET,
 
