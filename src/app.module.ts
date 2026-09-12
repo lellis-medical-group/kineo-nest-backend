@@ -10,7 +10,7 @@ import { AppController } from "./app.controller";
 import { ApplicationsModule } from "./applications/applications.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception/http-exception.filter";
 import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-proxy.guard";
-import configuration from "./config/configuration";
+import configuration, { envValidationSchema } from "./config/configuration";
 import { DataLifecycleModule } from "./data-lifecycle/data-lifecycle.module";
 import { HealthModule } from "./health/health.module";
 import { auth } from "./lib/auth";
@@ -21,7 +21,11 @@ import { ReplacementlistingsModule } from "./replacementlistings/replacementlist
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      validationSchema: envValidationSchema,
+    }),
     ScheduleModule.forRoot(),
     PrismaModule,
     ThrottlerModule.forRootAsync({
