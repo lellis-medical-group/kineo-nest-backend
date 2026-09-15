@@ -1,10 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { logError, logEvent } from "../lib/log";
 import { PrismaService } from "../prisma.service";
 
 /** Default retention horizon for the account-deletion audit trail (days). */
-const DELETION_REQUEST_RETENTION_DAYS = 365;
+export const DELETION_REQUEST_RETENTION_DAYS = 365;
 
 /**
  * Scheduled retention sweeps (data minimization, art. 5(1)(e) GDPR): rows that
@@ -23,10 +24,26 @@ const DELETION_REQUEST_RETENTION_DAYS = 365;
  */
 @Injectable()
 export class DataLifecycleService {
-  private readonly deletionRequestRetentionDays =
-    deletionRequestRetentionDaysFromEnv();
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    @Inject(ConfigService)
+    private readonly config?: ConfigService,
+  ) {}
 
-  constructor(private readonly prisma: PrismaService) {}
+  private get deletionRequestRetentionDays(): number {
+    const fromConfig = this.config?.get<number>(
+      "dataDeletionRequestRetentionDays",
+    );
+    if (
+      typeof fromConfig === "number" &&
+      Number.isSafeInteger(fromConfig) &&
+      fromConfig > 0
+    ) {
+      return fromConfig;
+    }
+    return deletionRequestRetentionDaysFromEnv();
+  }
 
   @Cron(CronExpression.EVERY_HOUR)
   async purgeExpired() {
@@ -69,8 +86,10 @@ export class DataLifecycleService {
   }
 }
 
-function deletionRequestRetentionDaysFromEnv(): number {
-  const raw = process.env.DATA_DELETION_REQUEST_RETENTION_DAYS;
+export function deletionRequestRetentionDaysFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env.DATA_DELETION_REQUEST_RETENTION_DAYS;
   if (!raw) {
     return DELETION_REQUEST_RETENTION_DAYS;
   }

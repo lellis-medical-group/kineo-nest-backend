@@ -15,8 +15,9 @@ export function buildFrontendAuthUrl(
   serverUrl: string,
   pagePath: string,
   extraParams?: Record<string, string | null | undefined>,
+  frontendUrl?: string,
 ): string {
-  const origin = frontendOrigin();
+  const origin = frontendOrigin(frontendUrl);
 
   try {
     const parsed = new URL(serverUrl);
@@ -44,8 +45,11 @@ export function buildFrontendAuthUrl(
 
 const DEFAULT_FRONTEND_URL = "http://localhost:3001";
 
-function frontendOrigin(): string {
-  return (process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL).replace(/\/+$/, "");
+function frontendOrigin(explicit?: string): string {
+  return (explicit || process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL).replace(
+    /\/+$/,
+    "",
+  );
 }
 
 function tokenFromPathname(pathname: string): string | null {

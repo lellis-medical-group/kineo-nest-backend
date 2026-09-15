@@ -13,7 +13,11 @@ import { ThrottlerBehindProxyGuard } from "./common/guards/throttler-behind-prox
 import configuration, { envValidationSchema } from "./config/configuration";
 import { DataLifecycleModule } from "./data-lifecycle/data-lifecycle.module";
 import { HealthModule } from "./health/health.module";
-import { auth } from "./lib/auth";
+import {
+  type ConfigGetter,
+  createAuth,
+  readAuthEnvFromConfig,
+} from "./lib/auth";
 import { PracticesModule } from "./practices/practices.module";
 import { PrismaModule } from "./prisma.module";
 import { ProfileModule } from "./profile/profile.module";
@@ -51,7 +55,15 @@ import { ReplacementlistingsModule } from "./replacementlistings/replacementlist
         ],
       }),
     }),
-    AuthModule.forRoot({ auth }),
+    AuthModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        auth: createAuth(
+          readAuthEnvFromConfig(config as unknown as ConfigGetter),
+        ),
+      }),
+    }),
     AccountDeletionModule,
     ProfileModule,
     PracticesModule,

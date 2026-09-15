@@ -3,3 +3,8 @@ dist
 *.log
 *.md
 .git
+# Never bake local secrets into the image (prod injects env at runtime).
+# .env.example stays included (no secrets, documents required vars).
+.env
+.env.local
+.env.*.local

@@ -1,16 +1,72 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "localhost",
-  port: Number(process.env.SMTP_PORT) || 1025,
-  secure: process.env.SMTP_SECURE === "true",
-  auth: process.env.SMTP_USER
-    ? {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      }
-    : undefined,
-});
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  from: string;
+  user?: string;
+  pass?: string;
+}
+
+const DEFAULT_SMTP: SmtpConfig = {
+  host: "localhost",
+  port: 1025,
+  secure: false,
+  from: "noreply@localhost",
+};
+
+let smtpOverride: Partial<SmtpConfig> | undefined;
+let cachedTransporter:
+  | ReturnType<typeof nodemailer.createTransport>
+  | undefined;
+let cachedKey: string | undefined;
+
+/** Override the SMTP config (DI path, tests). Pass `undefined` to clear. */
+export function configureMailer(config?: Partial<SmtpConfig>): void {
+  smtpOverride = config;
+  cachedTransporter = undefined;
+  cachedKey = undefined;
+}
+
+export function resolveSmtpConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): SmtpConfig {
+  const port = Number(smtpOverride?.port ?? env.SMTP_PORT ?? DEFAULT_SMTP.port);
+  return {
+    host: smtpOverride?.host ?? env.SMTP_HOST ?? DEFAULT_SMTP.host,
+    port: Number.isSafeInteger(port) && port > 0 ? port : DEFAULT_SMTP.port,
+    secure: smtpOverride?.secure ?? (env.SMTP_SECURE === "true" ? true : false),
+    from: smtpOverride?.from ?? env.SMTP_FROM ?? DEFAULT_SMTP.from,
+    user: smtpOverride?.user ?? env.SMTP_USER ?? undefined,
+    pass: smtpOverride?.pass ?? env.SMTP_PASS ?? undefined,
+  };
+}
+
+function getTransporter() {
+  const smtp = resolveSmtpConfig();
+  const key = JSON.stringify({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    user: smtp.user ?? null,
+  });
+  if (!cachedTransporter || cachedKey !== key) {
+    cachedTransporter = nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
+      auth: smtp.user
+        ? {
+            user: smtp.user,
+            pass: smtp.pass,
+          }
+        : undefined,
+    });
+    cachedKey = key;
+  }
+  return cachedTransporter;
+}
 
 export async function sendEmail({
   to,
@@ -21,9 +77,10 @@ export async function sendEmail({
   subject: string;
   html: string;
 }) {
+  const smtp = resolveSmtpConfig();
   try {
-    return await transporter.sendMail({
-      from: process.env.SMTP_FROM || "noreply@localhost",
+    return await getTransporter().sendMail({
+      from: smtp.from,
       to,
       subject,
       html,

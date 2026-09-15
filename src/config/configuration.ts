@@ -15,160 +15,214 @@ function positiveInteger(
   return parsed;
 }
 
-function positiveIntegerOrUndefined(
+function optionalPositiveInteger(
   value: string | undefined,
-  fallback: number,
   name: string,
 ): number | undefined {
   if (value === undefined || value === "") {
     return undefined;
   }
-  return positiveInteger(value, fallback, name);
+  return positiveInteger(value, 0, name);
 }
 
-/** Duration in seconds for a suffix like "15m", "1h", "7d". */
-function durationSeconds(raw: string | undefined, fallback: number): number {
-  if (!raw) return fallback;
-  const match = /^(\d+)\s*(ms|s|m|h|d|w)$/i.exec(raw.trim());
-  if (!match) return fallback;
+/**
+ * Parses a duration expressed either as plain seconds ("604800") or with a
+ * suffix like "15m", "1h", "7d". Returns seconds.
+ * Throws on invalid format instead of silently falling back, so a typo in
+ * SESSION_EXPIRES_IN / SESSION_UPDATE_AGE fails fast at boot.
+ */
+export function durationSeconds(
+  raw: string | undefined,
+  fallback: number,
+): number {
+  if (raw === undefined || raw === "") return fallback;
+  const trimmed = raw.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const seconds = Number(trimmed);
+    if (!Number.isSafeInteger(seconds) || seconds <= 0) {
+      throw new Error(
+        `Invalid duration (must be a positive integer in seconds or a suffixed duration like "15m"): ${raw}`,
+      );
+    }
+    return seconds;
+  }
+  const match = /^(\d+)\s*(ms|s|m|h|d|w)$/i.exec(trimmed);
+  if (!match) {
+    throw new Error(
+      `Invalid duration "${raw}": expected seconds ("604800") or a suffixed duration ("15m", "1h", "7d")`,
+    );
+  }
   const value = Number(match[1]);
-  const unit = match[2].toLowerCase() as keyof {
-    ms: number;
-    s: number;
-    m: number;
-    h: number;
-    d: number;
-    w: number;
-  };
+  const unit = match[2].toLowerCase();
   const multipliers: Record<string, number> = {
-    ms: 1,
+    ms: 1 / 1000,
     s: 1,
     m: 60,
     h: 3600,
     d: 86400,
     w: 604800,
   };
-  if (!Number.isSafeInteger(value) || value <= 0) return fallback;
-  return value * multipliers[unit];
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`Invalid duration "${raw}": value must be positive`);
+  }
+  const seconds = value * multipliers[unit];
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error(`Invalid duration "${raw}": value must be positive`);
+  }
+  return seconds;
 }
 
-export default () => ({
-  // ---- Server ----
-  port: positiveInteger(process.env.PORT, 3000, "PORT"),
+function configuration() {
+  return {
+    // ---- Env ----
+    nodeEnv: process.env.NODE_ENV || "development",
 
-  // ---- CORS ----
-  cors: {
-    origins: (process.env.TRUSTED_ORIGINS ?? "")
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean),
-    credentials: true,
-  },
+    // ---- Server ----
+    port: positiveInteger(process.env.PORT, 3000, "PORT"),
 
-  trustProxy: process.env.TRUST_PROXY === "true",
+    // ---- CORS ----
+    cors: {
+      origins: (process.env.TRUSTED_ORIGINS ?? "")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+      credentials: true,
+    },
 
-  // ---- Throttler (NestJS ThrottlerModule) ----
-  throttle: {
-    short: {
-      ttl: 1_000,
-      limit: positiveInteger(
-        process.env.THROTTLE_SHORT_LIMIT,
-        5,
-        "THROTTLE_SHORT_LIMIT",
+    trustProxy: process.env.TRUST_PROXY === "true",
+
+    // ---- Throttler (NestJS ThrottlerModule) ----
+    throttle: {
+      short: {
+        ttl: 1_000,
+        limit: positiveInteger(
+          process.env.THROTTLE_SHORT_LIMIT,
+          5,
+          "THROTTLE_SHORT_LIMIT",
+        ),
+      },
+      medium: {
+        ttl: 10_000,
+        limit: positiveInteger(
+          process.env.THROTTLE_MEDIUM_LIMIT,
+          30,
+          "THROTTLE_MEDIUM_LIMIT",
+        ),
+      },
+      long: {
+        ttl: 60_000,
+        limit: positiveInteger(
+          process.env.THROTTLE_LONG_LIMIT,
+          150,
+          "THROTTLE_LONG_LIMIT",
+        ),
+      },
+    },
+
+    // ---- Rate limiting (better-auth internal, separate from ThrottlerModule) ----
+    rateLimit: {
+      window: positiveInteger(
+        process.env.RATE_LIMIT_WINDOW,
+        60,
+        "RATE_LIMIT_WINDOW",
+      ),
+      max: positiveInteger(process.env.RATE_LIMIT_MAX, 20, "RATE_LIMIT_MAX"),
+    },
+
+    // ---- Session (better-auth) ----
+    session: {
+      expiresIn: durationSeconds(
+        process.env.SESSION_EXPIRES_IN,
+        60 * 60 * 24 * 7, // 7 days
+      ),
+      updateAge: durationSeconds(
+        process.env.SESSION_UPDATE_AGE,
+        60 * 60 * 24, // 1 day
+      ),
+      cookieCache: {
+        enabled: process.env.COOKIE_CACHE_ENABLED !== "false",
+        maxAge: positiveInteger(
+          process.env.COOKIE_CACHE_MAX_AGE,
+          300,
+          "COOKIE_CACHE_MAX_AGE",
+        ),
+      },
+    },
+
+    // ---- JWT (better-auth, optional) ----
+    jwt: {
+      enabled: process.env.JWT_ENABLED === "true",
+      expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
+      rotationIntervalSeconds: process.env.JWT_ROTATION_INTERVAL
+        ? Number(process.env.JWT_ROTATION_INTERVAL)
+        : undefined,
+    },
+
+    // ---- Email (SMTP / nodemailer) ----
+    smtp: {
+      host: process.env.SMTP_HOST || "localhost",
+      port: positiveInteger(process.env.SMTP_PORT, 1025, "SMTP_PORT"),
+      secure: process.env.SMTP_SECURE === "true",
+      from: process.env.SMTP_FROM || "noreply@localhost",
+      user: process.env.SMTP_USER || undefined,
+      pass: process.env.SMTP_PASS || undefined,
+    },
+
+    // ---- Auth ----
+    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+    frontendUrl: process.env.FRONTEND_URL || "http://localhost:3001",
+    betterAuthUrl: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+    auth: {
+      secret: process.env.BETTER_AUTH_SECRET,
+    },
+
+    // ---- Business constraints (quotas) ----
+    // Undefined = unlimited. Keys must match the `limits.*` lookups in the
+    // domain services (practices, replacementlistings, applications).
+    limits: {
+      practicesPerProfile: optionalPositiveInteger(
+        process.env.MAX_PRACTICES_PER_PROFILE,
+        "MAX_PRACTICES_PER_PROFILE",
+      ),
+      activeListingsPerProfile: optionalPositiveInteger(
+        process.env.MAX_ACTIVE_LISTINGS_PER_PROFILE,
+        "MAX_ACTIVE_LISTINGS_PER_PROFILE",
+      ),
+      activeApplicationsPerProfile: optionalPositiveInteger(
+        process.env.MAX_ACTIVE_APPLICATIONS_PER_PROFILE,
+        "MAX_ACTIVE_APPLICATIONS_PER_PROFILE",
       ),
     },
-    medium: {
-      ttl: 10_000,
-      limit: positiveInteger(
-        process.env.THROTTLE_MEDIUM_LIMIT,
-        30,
-        "THROTTLE_MEDIUM_LIMIT",
-      ),
+
+    // ---- Database (mirrors validated DATABASE_URL for DI consumers) ----
+    databaseUrl: (process.env.DATABASE_URL ?? "").trim(),
+
+    // ---- Data lifecycle ----
+    dataDeletionRequestRetentionDays: (() => {
+      const raw = process.env.DATA_DELETION_REQUEST_RETENTION_DAYS;
+      if (!raw) return 365;
+      const parsed = Number(raw);
+      if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+        throw new Error(
+          "DATA_DELETION_REQUEST_RETENTION_DAYS must be a positive integer",
+        );
+      }
+      return parsed;
+    })(),
+
+    // ---- Swagger (can be overridden via env if needed) ----
+    swagger: {
+      title: "Kineo API",
+      description: "Kineo API documentation",
+      version: "1.0",
+      tag: "Kineo",
     },
-    long: {
-      ttl: 60_000,
-      limit: positiveInteger(
-        process.env.THROTTLE_LONG_LIMIT,
-        150,
-        "THROTTLE_LONG_LIMIT",
-      ),
-    },
-  },
+  };
+}
 
-  // ---- Rate limiting (better-auth internal, separate from ThrottlerModule) ----
-  rateLimit: {
-    window: positiveInteger(
-      process.env.RATE_LIMIT_WINDOW,
-      60,
-      "RATE_LIMIT_WINDOW",
-    ),
-    max: positiveInteger(process.env.RATE_LIMIT_MAX, 20, "RATE_LIMIT_MAX"),
-  },
+export default configuration;
 
-  // ---- Session (better-auth) ----
-  session: {
-    expiresIn: durationSeconds(
-      process.env.SESSION_EXPIRES_IN,
-      60 * 60 * 24 * 7, // 7 days
-    ),
-    updateAge: durationSeconds(
-      process.env.SESSION_UPDATE_AGE,
-      60 * 60 * 24, // 1 day
-    ),
-    cookieCache: {
-      enabled: process.env.COOKIE_CACHE_ENABLED !== "false",
-      maxAge: positiveInteger(
-        process.env.COOKIE_CACHE_MAX_AGE,
-        300,
-        "COOKIE_CACHE_MAX_AGE",
-      ),
-    },
-  },
-
-  // ---- JWT (better-auth, optional) ----
-  jwt: {
-    enabled: process.env.JWT_ENABLED === "true",
-    expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
-    rotationIntervalSeconds: process.env.JWT_ROTATION_INTERVAL
-      ? Number(process.env.JWT_ROTATION_INTERVAL)
-      : undefined,
-  },
-
-  // ---- Email (SMTP / nodemailer) ----
-  smtp: {
-    host: process.env.SMTP_HOST || "localhost",
-    port: positiveInteger(process.env.SMTP_PORT, 1025, "SMTP_PORT"),
-    secure: process.env.SMTP_SECURE === "true",
-    from: process.env.SMTP_FROM || "noreply@localhost",
-    user: process.env.SMTP_USER || undefined,
-    pass: process.env.SMTP_PASS || undefined,
-  },
-
-  // ---- Auth ----
-  requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
-  frontendUrl: process.env.FRONTEND_URL || "http://localhost:3001",
-
-  // ---- Data lifecycle ----
-  dataDeletionRequestRetentionDays: (() => {
-    const raw = process.env.DATA_DELETION_REQUEST_RETENTION_DAYS;
-    if (!raw) return 365;
-    const parsed = Number(raw);
-    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-      throw new Error(
-        "DATA_DELETION_REQUEST_RETENTION_DAYS must be a positive integer",
-      );
-    }
-    return parsed;
-  })(),
-
-  // ---- Swagger (can be overridden via env if needed) ----
-  swagger: {
-    title: "Kineo API",
-    description: "Kineo API documentation",
-    version: "1.0",
-    tag: "Kineo",
-  },
-});
+export type AppConfig = ReturnType<typeof configuration>;
 
 // ============================================================
 // Environment variable validation schema (Zod).
@@ -181,6 +235,22 @@ export default () => ({
 const BoolEnum = z.enum(["true", "false"]);
 const NodeEnvEnum = z.enum(["development", "production", "test", "provision"]);
 
+/** Accepts plain seconds ("604800") or a suffixed duration ("15m", "1h"). */
+const DurationString = z.string().refine(
+  (raw) => {
+    const trimmed = raw.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const n = Number(trimmed);
+      return Number.isSafeInteger(n) && n > 0;
+    }
+    return /^(\d+)\s*(ms|s|m|h|d|w)$/i.test(trimmed);
+  },
+  {
+    message:
+      'expected seconds ("604800") or a suffixed duration ("15m", "1h", "7d")',
+  },
+);
+
 export const envValidationSchema = z
   .object({
     // ---- Critical (required, no fallback) ----
@@ -190,9 +260,28 @@ export const envValidationSchema = z
     // ---- Server ----
     PORT: z.coerce.number().int().positive().max(65535).default(3000),
     NODE_ENV: NodeEnvEnum.default("development"),
+    BETTER_AUTH_URL: z.string().url().default("http://localhost:3000"),
 
     // ---- CORS / Frontend ----
-    TRUSTED_ORIGINS: z.string().default(""),
+    TRUSTED_ORIGINS: z
+      .string()
+      .default("")
+      .refine(
+        (raw) =>
+          raw
+            .split(",")
+            .map((origin) => origin.trim())
+            .filter(Boolean)
+            .every((origin) => {
+              try {
+                new URL(origin);
+                return true;
+              } catch {
+                return false;
+              }
+            }),
+        { message: "TRUSTED_ORIGINS must be a comma-separated list of URLs" },
+      ),
     FRONTEND_URL: z.string().url().default("http://localhost:3001"),
 
     // ---- Proxy ----
@@ -208,14 +297,14 @@ export const envValidationSchema = z
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
 
     // ---- Session (better-auth) ----
-    SESSION_EXPIRES_IN: z.string().default("604800"),
-    SESSION_UPDATE_AGE: z.string().default("86400"),
+    SESSION_EXPIRES_IN: DurationString.default("604800"),
+    SESSION_UPDATE_AGE: DurationString.default("86400"),
     COOKIE_CACHE_ENABLED: BoolEnum.default("true"),
     COOKIE_CACHE_MAX_AGE: z.coerce.number().int().positive().default(300),
 
     // ---- JWT (better-auth, optional) ----
     JWT_ENABLED: BoolEnum.default("false"),
-    JWT_EXPIRATION_TIME: z.string().default("15m"),
+    JWT_EXPIRATION_TIME: DurationString.default("15m"),
     JWT_ROTATION_INTERVAL: z.coerce.number().int().positive().optional(),
 
     // ---- Email SMTP ----
@@ -259,5 +348,19 @@ export const envValidationSchema = z
 
     // ---- Auth ----
     REQUIRE_EMAIL_VERIFICATION: BoolEnum.default("false"),
+  })
+  .superRefine((env, ctx) => {
+    // SMTP auth is all-or-nothing: a user without password (or vice versa)
+    // would silently fall back to an unauthenticated transporter.
+    if (
+      (env.SMTP_USER && !env.SMTP_PASS) ||
+      (!env.SMTP_USER && env.SMTP_PASS)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "SMTP_USER and SMTP_PASS must be set together",
+        path: ["SMTP_USER"],
+      });
+    }
   })
   .passthrough(); // ignores unexpected process.env variables (PATH, HOME, etc.)
