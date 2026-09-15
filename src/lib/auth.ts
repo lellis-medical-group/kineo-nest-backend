@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { jwt, openAPI } from "better-auth/plugins";
+import { durationSeconds } from "../config/configuration";
 import { emailVerificationStatusPlugin } from "./auth/email-verification-status";
 import { inputValidationHook } from "./auth/input-validation";
 import {
@@ -14,155 +15,300 @@ import { buildFrontendAuthUrl } from "./email/links";
 import { logError } from "./log";
 import { createPrismaClient } from "./prisma";
 
-const prisma = createPrismaClient();
-
-if (!process.env.BETTER_AUTH_SECRET) {
-  throw new Error("BETTER_AUTH_SECRET is not set");
+export interface AuthEnv {
+  secret: string;
+  baseUrl: string;
+  trustedOrigins: string[];
+  rateLimitWindow: number;
+  rateLimitMax: number;
+  sessionExpiresIn: number;
+  sessionUpdateAge: number;
+  cookieCacheEnabled: boolean;
+  cookieCacheMaxAge: number;
+  jwtEnabled: boolean;
+  jwtExpirationTime: string;
+  jwtRotationInterval?: number;
+  requireEmailVerification: boolean;
+  frontendUrl: string;
+  nodeEnv: string;
 }
 
-const jwtEnabled = process.env.JWT_ENABLED === "true";
+type EnvSource = NodeJS.ProcessEnv | Record<string, string | undefined>;
 
-export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: "postgresql",
-  }),
+function positiveInt(
+  raw: string | undefined,
+  fallback: number,
+  name: string,
+): number {
+  if (raw === undefined || raw === "") return fallback;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer, got: ${raw}`);
+  }
+  return parsed;
+}
 
-  plugins: [
-    openAPI(),
-    nextCookies(),
-    emailVerificationStatusPlugin(),
-    ...(jwtEnabled
-      ? [
-          jwt({
-            jwt: {
-              expirationTime: process.env.JWT_EXPIRATION_TIME || "15m",
-              issuer: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-              audience: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-            },
-            jwks: {
-              rotationInterval: process.env.JWT_ROTATION_INTERVAL
-                ? Number(process.env.JWT_ROTATION_INTERVAL)
-                : undefined,
-            },
-          }),
-        ]
-      : []),
-  ],
+/**
+ * Single parsing point for the standalone (non-DI) path: scripts, tests,
+ * or `import { auth }`. Mirrors `src/config/configuration.ts` semantics
+ * (durations accept seconds or "15m"/"1h" suffixes, invalid values throw).
+ */
+export function readAuthEnv(env: EnvSource = process.env): AuthEnv {
+  const secret = env.BETTER_AUTH_SECRET;
+  if (!secret) {
+    throw new Error("BETTER_AUTH_SECRET is not set");
+  }
+  const baseUrl = env.BETTER_AUTH_URL || "http://localhost:3000";
+  return {
+    secret,
+    baseUrl,
+    trustedOrigins: (env.TRUSTED_ORIGINS || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    rateLimitWindow: positiveInt(
+      env.RATE_LIMIT_WINDOW,
+      60,
+      "RATE_LIMIT_WINDOW",
+    ),
+    rateLimitMax: positiveInt(env.RATE_LIMIT_MAX, 20, "RATE_LIMIT_MAX"),
+    sessionExpiresIn: durationSeconds(env.SESSION_EXPIRES_IN, 60 * 60 * 24 * 7),
+    sessionUpdateAge: durationSeconds(env.SESSION_UPDATE_AGE, 60 * 60 * 24),
+    cookieCacheEnabled: env.COOKIE_CACHE_ENABLED !== "false",
+    cookieCacheMaxAge: positiveInt(
+      env.COOKIE_CACHE_MAX_AGE,
+      60 * 5,
+      "COOKIE_CACHE_MAX_AGE",
+    ),
+    jwtEnabled: env.JWT_ENABLED === "true",
+    jwtExpirationTime: env.JWT_EXPIRATION_TIME || "15m",
+    jwtRotationInterval: env.JWT_ROTATION_INTERVAL
+      ? positiveInt(env.JWT_ROTATION_INTERVAL, 0, "JWT_ROTATION_INTERVAL")
+      : undefined,
+    requireEmailVerification: env.REQUIRE_EMAIL_VERIFICATION === "true",
+    frontendUrl: env.FRONTEND_URL || "http://localhost:3001",
+    nodeEnv: env.NODE_ENV || "development",
+  };
+}
 
-  user: {
-    // Email self-service (right to rectification, art. 16 GDPR): the
-    // confirmation email goes to the NEW address, so only someone controlling
-    // it can apply the change.
-    changeEmail: {
-      enabled: true,
+/** Minimal structural view of ConfigService (avoids a Nest import in lib). */
+export interface ConfigGetter {
+  get<T>(key: string, fallback?: T): T | undefined;
+}
 
-      sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
-        await sendChangeEmailEmail({
-          email: newEmail,
-          name: user.name,
-          url: buildFrontendAuthUrl(url, "/verify-email", {
+/**
+ * DI path: builds the same AuthEnv from the validated, typed application
+ * config instead of re-reading `process.env` (single source of truth).
+ */
+export function readAuthEnvFromConfig(config: ConfigGetter): AuthEnv {
+  const secret = config.get<string>("auth.secret");
+  if (!secret) {
+    // ConfigModule validation guarantees BETTER_AUTH_SECRET; this covers
+    // hand-rolled ConfigService doubles in unit tests.
+    return readAuthEnv();
+  }
+  const frontendUrl =
+    config.get<string>("frontendUrl", "http://localhost:3001") ??
+    "http://localhost:3001";
+  const baseUrl =
+    config.get<string>("betterAuthUrl", "http://localhost:3000") ??
+    "http://localhost:3000";
+  return {
+    secret,
+    baseUrl,
+    trustedOrigins: config.get<string[]>("cors.origins", []) ?? [],
+    rateLimitWindow: config.get<number>("rateLimit.window", 60) ?? 60,
+    rateLimitMax: config.get<number>("rateLimit.max", 20) ?? 20,
+    sessionExpiresIn:
+      config.get<number>("session.expiresIn", 60 * 60 * 24 * 7) ??
+      60 * 60 * 24 * 7,
+    sessionUpdateAge:
+      config.get<number>("session.updateAge", 60 * 60 * 24) ?? 60 * 60 * 24,
+    cookieCacheEnabled:
+      config.get<boolean>("session.cookieCache.enabled", true) ?? true,
+    cookieCacheMaxAge:
+      config.get<number>("session.cookieCache.maxAge", 300) ?? 300,
+    jwtEnabled: config.get<boolean>("jwt.enabled", false) ?? false,
+    jwtExpirationTime: config.get<string>("jwt.expirationTime", "15m") ?? "15m",
+    jwtRotationInterval: config.get<number | undefined>(
+      "jwt.rotationIntervalSeconds",
+    ),
+    requireEmailVerification:
+      config.get<boolean>("requireEmailVerification", false) ?? false,
+    frontendUrl,
+    nodeEnv: config.get<string>("nodeEnv", "development") ?? "development",
+  };
+}
+
+export function createAuth(
+  authEnv: AuthEnv = readAuthEnv(),
+  prismaClient?: ReturnType<typeof createPrismaClient>,
+) {
+  const prisma = prismaClient ?? createPrismaClient();
+  const frontendUrl = authEnv.frontendUrl;
+
+  return betterAuth({
+    database: prismaAdapter(prisma, {
+      provider: "postgresql",
+    }),
+
+    plugins: [
+      openAPI(),
+      nextCookies(),
+      emailVerificationStatusPlugin(),
+      ...(authEnv.jwtEnabled
+        ? [
+            jwt({
+              jwt: {
+                expirationTime: authEnv.jwtExpirationTime,
+                issuer: authEnv.baseUrl,
+                audience: authEnv.baseUrl,
+              },
+              jwks: {
+                rotationInterval: authEnv.jwtRotationInterval,
+              },
+            }),
+          ]
+        : []),
+    ],
+
+    user: {
+      // Email self-service (right to rectification, art. 16 GDPR): the
+      // confirmation email goes to the NEW address, so only someone controlling
+      // it can apply the change.
+      changeEmail: {
+        enabled: true,
+
+        sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+          await sendChangeEmailEmail({
             email: newEmail,
-          }),
-        });
+            name: user.name,
+            url: buildFrontendAuthUrl(
+              url,
+              "/verify-email",
+              {
+                email: newEmail,
+              },
+              frontendUrl,
+            ),
+          });
+        },
+      },
+
+      deleteUser: {
+        enabled: true,
+
+        // The deletion verification token lives 24h in the `verification` table
+        // (identifier: `delete-account-<token>`, value: user id).
+        deleteTokenExpiresIn: 60 * 60 * 24,
+
+        // Better-auth is limited to the REQUEST phase: mint the single-use token
+        // and email the confirmation link (frontend `/goodbye`). The hard delete
+        // itself is done by `POST /account/confirm-deletion`
+        // (AccountDeletionService): it consumes the token without requiring a
+        // session, performs the audit tracking (DataDeletionRequest -> EXECUTED)
+        // and purges `verification` leftovers, all in one transaction. The
+        // deletion callbacks (beforeDelete/afterDelete) are intentionally NOT
+        // wired here — better-auth never deletes the user in this flow, so they
+        // would be dead code.
+        sendDeleteAccountVerification: async ({ user, url }) => {
+          // Accountability trail (art. 5(2) GDPR): record the request before
+          // any execution. Never blocks the deletion flow on a bookkeeping
+          // failure — the hourly sweep keeps the process resilient.
+          try {
+            await prisma.dataDeletionRequest.create({
+              data: { userId: user.id, email: user.email },
+            });
+          } catch (error) {
+            logError("account.deletion.request.audit_failed", error, {
+              userId: user.id,
+            });
+          }
+
+          await sendDeleteAccountEmail({
+            email: user.email,
+            name: user.name,
+            url: buildFrontendAuthUrl(url, "/goodbye", undefined, frontendUrl),
+          });
+        },
       },
     },
 
-    deleteUser: {
+    secret: authEnv.secret,
+
+    baseURL: authEnv.baseUrl,
+
+    trustedOrigins: authEnv.trustedOrigins,
+
+    rateLimit: {
+      enabled: true,
+      window: authEnv.rateLimitWindow,
+      max: authEnv.rateLimitMax,
+    },
+
+    session: {
+      expiresIn: authEnv.sessionExpiresIn,
+      updateAge: authEnv.sessionUpdateAge,
+      cookieCache: {
+        enabled: authEnv.cookieCacheEnabled,
+        maxAge: authEnv.cookieCacheMaxAge,
+      },
+    },
+
+    advanced: {
+      useSecureCookies: authEnv.nodeEnv === "production",
+    },
+
+    emailAndPassword: {
       enabled: true,
 
-      // The deletion verification token lives 24h in the `verification` table
-      // (identifier: `delete-account-<token>`, value: user id).
-      deleteTokenExpiresIn: 60 * 60 * 24,
+      requireEmailVerification: authEnv.requireEmailVerification,
+      minPasswordLength: 8,
+      maxPasswordLength: 128,
+      autoSignIn: true,
 
-      // Better-auth is limited to the REQUEST phase: mint the single-use token
-      // and email the confirmation link (frontend `/goodbye`). The hard delete
-      // itself is done by `POST /account/confirm-deletion`
-      // (AccountDeletionService): it consumes the token without requiring a
-      // session, performs the audit tracking (DataDeletionRequest -> EXECUTED)
-      // and purges `verification` leftovers, all in one transaction. The
-      // deletion callbacks (beforeDelete/afterDelete) are intentionally NOT
-      // wired here — better-auth never deletes the user in this flow, so they
-      // would be dead code.
-      sendDeleteAccountVerification: async ({ user, url }) => {
-        // Accountability trail (art. 5(2) GDPR): record the request before
-        // any execution. Never blocks the deletion flow on a bookkeeping
-        // failure — the hourly sweep keeps the process resilient.
-        try {
-          await prisma.dataDeletionRequest.create({
-            data: { userId: user.id, email: user.email },
-          });
-        } catch (error) {
-          logError("account.deletion.request.audit_failed", error, {
-            userId: user.id,
-          });
-        }
-
-        await sendDeleteAccountEmail({
+      sendResetPassword: async ({ user, url }) => {
+        await sendResetPasswordEmail({
           email: user.email,
           name: user.name,
-          url: buildFrontendAuthUrl(url, "/goodbye"),
+          url: buildFrontendAuthUrl(
+            url,
+            "/reset-password",
+            undefined,
+            frontendUrl,
+          ),
         });
       },
     },
-  },
 
-  secret: process.env.BETTER_AUTH_SECRET,
+    emailVerification: {
+      sendVerificationEmail: async ({ user, url }) => {
+        await sendVerificationEmail({
+          email: user.email,
+          name: user.name,
+          url: buildFrontendAuthUrl(
+            url,
+            "/verify-email",
+            { email: user.email },
+            frontendUrl,
+          ),
+        });
+      },
 
-  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-
-  trustedOrigins: (process.env.TRUSTED_ORIGINS || "")
-    .split(",")
-    .filter(Boolean),
-
-  rateLimit: {
-    enabled: true,
-    window: Number(process.env.RATE_LIMIT_WINDOW) || 60,
-    max: Number(process.env.RATE_LIMIT_MAX) || 20,
-  },
-
-  session: {
-    expiresIn: Number(process.env.SESSION_EXPIRES_IN) || 60 * 60 * 24 * 7,
-    updateAge: Number(process.env.SESSION_UPDATE_AGE) || 60 * 60 * 24,
-    cookieCache: {
-      enabled: process.env.COOKIE_CACHE_ENABLED !== "false",
-      maxAge: Number(process.env.COOKIE_CACHE_MAX_AGE) || 60 * 5,
-    },
-  },
-
-  advanced: {
-    useSecureCookies: process.env.NODE_ENV === "production",
-  },
-
-  emailAndPassword: {
-    enabled: true,
-
-    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
-    minPasswordLength: 8,
-    maxPasswordLength: 128,
-    autoSignIn: true,
-
-    sendResetPassword: async ({ user, url }) => {
-      await sendResetPasswordEmail({
-        email: user.email,
-        name: user.name,
-        url: buildFrontendAuthUrl(url, "/reset-password"),
-      });
-    },
-  },
-
-  emailVerification: {
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmail({
-        email: user.email,
-        name: user.name,
-        url: buildFrontendAuthUrl(url, "/verify-email", { email: user.email }),
-      });
+      autoSignInAfterVerification: true,
     },
 
-    autoSignInAfterVerification: true,
-  },
+    hooks: {
+      before: inputValidationHook,
+    },
+  });
+}
 
-  hooks: {
-    before: inputValidationHook,
-  },
-});
+/**
+ * Standalone instance for scripts/tests importing `{ auth }` directly.
+ * The Nest application path builds its own instance from ConfigService
+ * (see `AppModule`), so the validated config stays the single source of truth.
+ */
+export const auth = createAuth();
+
+export type BetterAuthInstance = ReturnType<typeof createAuth>;

@@ -2,8 +2,11 @@ import {
   type ArgumentsHost,
   Catch,
   HttpException,
+  Inject,
   Logger,
+  Optional,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { BaseExceptionFilter, HttpAdapterHost } from "@nestjs/core";
 import { ZodSerializationException, ZodValidationException } from "nestjs-zod";
 import { ZodError, type ZodIssue } from "zod";
@@ -11,10 +14,24 @@ import { ZodError, type ZodIssue } from "zod";
 @Catch(HttpException)
 export class HttpExceptionFilter extends BaseExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
-  private readonly isProduction = process.env.NODE_ENV === "production";
 
-  constructor(httpAdapterHost: HttpAdapterHost) {
+  constructor(
+    httpAdapterHost: HttpAdapterHost,
+    @Optional()
+    @Inject(ConfigService)
+    private readonly config?: ConfigService,
+  ) {
     super(httpAdapterHost.httpAdapter);
+  }
+
+  private get isProduction(): boolean {
+    return (
+      (
+        this.config?.get<string>("nodeEnv", "development") ??
+        process.env.NODE_ENV ??
+        "development"
+      ).toString() === "production"
+    );
   }
 
   catch(exception: HttpException, host: ArgumentsHost) {
